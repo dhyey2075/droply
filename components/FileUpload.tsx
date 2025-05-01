@@ -1,4 +1,4 @@
-"use client" // This component must be a client component
+"use client"
 
 import { useUser } from "@clerk/nextjs";
 import {
@@ -8,16 +8,19 @@ import {
     ImageKitUploadNetworkError,
     upload,
 } from "@imagekit/next";
-import { useState } from "react";
+import { useState, type RefObject } from "react";
+import { Button } from "@/components/ui/button";
+import { Upload } from "lucide-react";
 
-// UploadExample component demonstrates file uploading using ImageKit's Next.js SDK.
 interface UploadExampleProps {
-    fileInputRef: React.RefObject<HTMLInputElement>;
+    fileInputRef: RefObject<HTMLInputElement | null>;
     parentId: string;
+    onUploadComplete?: () => void;
 }
 
-const UploadExample: React.FC<UploadExampleProps> = ({ fileInputRef, parentId }) => {
+const UploadExample: React.FC<UploadExampleProps> = ({ fileInputRef, parentId, onUploadComplete }) => {
     const [progress, setProgress] = useState(0);
+    const [isUploading, setIsUploading] = useState(false);
     const { user } = useUser();
 
     const abortController = new AbortController();
@@ -41,22 +44,16 @@ const UploadExample: React.FC<UploadExampleProps> = ({ fileInputRef, parentId })
     const handleUpload = async () => {
         const fileInput = fileInputRef.current;
         if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-            alert("Please select a file to upload");
             return;
         }
 
+        setIsUploading(true);
         const file = fileInput.files[0];
 
-        let authParams;
         try {
-            authParams = await authenticator();
-        } catch (authError) {
-            console.error("Failed to authenticate for upload:", authError);
-            return;
-        }
-        const { signature, expire, token, publicKey } = authParams;
+            const authParams = await authenticator();
+            const { signature, expire, token, publicKey } = authParams;
 
-        try {
             const uploadResponse = await upload({
                 expire,
                 token,
@@ -69,19 +66,32 @@ const UploadExample: React.FC<UploadExampleProps> = ({ fileInputRef, parentId })
                 },
                 abortSignal: abortController.signal,
             });
-            console.log("Upload response:", uploadResponse);
-            console.log("User", user);
+
             const response = await fetch('/api/upload', {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    imagekit: uploadResponse, userId: user?.id, parentId: parentId
+                    imagekit: uploadResponse,
+                    userId: user?.id,
+                    parentId: parentId
                 })
             });
-            const data = await response.json();
-            console.log("File data added to db:", data);
+            
+            if (!response.ok) {
+                throw new Error('Failed to save file information');
+            }
+
+            // Reset the file input and progress
+            if (fileInput) {
+                fileInput.value = '';
+            }
+            setProgress(0);
+            
+            // Call the callback to update UI
+            onUploadComplete?.();
+            
         } catch (error) {
             if (error instanceof ImageKitAbortError) {
                 console.error("Upload aborted:", error.reason);
@@ -94,18 +104,28 @@ const UploadExample: React.FC<UploadExampleProps> = ({ fileInputRef, parentId })
             } else {
                 console.error("Upload error:", error);
             }
+        } finally {
+            setIsUploading(false);
         }
     };
 
     return (
-        <>
-            <input type="file" ref={fileInputRef} />
-            <button type="button" onClick={handleUpload}>
-                Upload file
-            </button>
-            <br />
-            Upload progress: <progress value={progress} max={100}></progress>
-        </>
+        <div className="flex items-center gap-2">
+            <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={handleUpload}
+            />
+            <Button
+                variant="default"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+            >
+                <Upload className="h-4 w-4 mr-2" />
+                {isUploading ? `Uploading ${Math.round(progress)}%` : "Upload"}
+            </Button>
+        </div>
     );
 };
 
