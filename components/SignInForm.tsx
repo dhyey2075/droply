@@ -57,9 +57,10 @@ export default function SignInForm() {
                     "Sign in couldn't be completed. Please try again."
                 )
             }
-        } catch (error: any) {
+        } catch (error: Error | unknown) {
+            const clerkError = error as { errors?: Array<{ message: string }> }
             setAuthError(
-                error.errors[0].message || "sign in error."
+                clerkError.errors?.[0]?.message || "sign in error."
             )
         }
         finally{
@@ -157,7 +158,7 @@ export default function SignInForm() {
     
           <CardFooter className="flex justify-center py-4">
             <p className="text-sm text-default-600">
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <Link
                 href="/signup"
                 className="text-primary hover:underline font-medium"

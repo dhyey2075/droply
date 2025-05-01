@@ -58,10 +58,11 @@ export default function SignUpForm() {
         strategy: "email_code",
       })
       setIsVerifying(true)
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       console.log("Sign up error", error);
+      const clerkError = error as { errors?: Array<{ message: string }> }
       setAuthError(
-        error.errors?.[0]?.message ||
+        clerkError.errors?.[0]?.message ||
         "An error occurred during sign-up. Please try again."
       );
     } finally {
@@ -91,10 +92,11 @@ export default function SignUpForm() {
           "Invalid verification code. Please try again."
         );
       }
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       console.log("Verification error", error);
+      const clerkError = error as { errors?: Array<{ message: string }> }
       setVerificationError(
-        error.errors?.[0]?.message ||
+        clerkError.errors?.[0]?.message ||
         "An error occurred during verification. Please try again."
       );
     } finally {
@@ -284,8 +286,7 @@ export default function SignUpForm() {
             <div className="flex items-start gap-2 p-3 bg-indigo-50 rounded-lg border border-indigo-100">
               <CheckCircle className="h-5 w-5 text-indigo-600 mt-0.5" />
               <p className="text-sm text-gray-700">
-                By signing up, you agree to our Terms of Service and Privacy
-                Policy
+                By signing up, you agree to our Terms of Service and Privacy Policy
               </p>
             </div>
           </div>

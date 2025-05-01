@@ -32,7 +32,7 @@ const Page: React.FC = () => {
 
     const [folderName, setFolderName] = React.useState<string>('')
 
-    const uploadRef = useRef<any>(null)
+    const uploadRef = useRef<HTMLInputElement>(null) as React.RefObject<HTMLInputElement>
 
     const [folderHierarchy, setFolderHierarchy] = useState<[string, string][]>([["00000000-0000-0000-0000-000000000000", "main"]])
 
@@ -73,7 +73,7 @@ const Page: React.FC = () => {
 
     useEffect(() => {
       fetchUserMedia()
-    }, [uploadRef])
+    }, [uploadRef, fetchUserMedia])
 
     const { isSignedIn, user } = useUser()
     if(!isSignedIn) return
