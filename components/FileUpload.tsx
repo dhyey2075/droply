@@ -8,7 +8,7 @@ import {
     ImageKitUploadNetworkError,
     upload,
 } from "@imagekit/next";
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 // UploadExample component demonstrates file uploading using ImageKit's Next.js SDK.
 interface UploadExampleProps {

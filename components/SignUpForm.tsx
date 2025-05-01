@@ -56,8 +56,8 @@ export default function SignUpForm() {
 
       await signUp.prepareEmailAddressVerification({
         strategy: "email_code",
-      });
-      setIsVerifying(true);
+      })
+      setIsVerifying(true)
     } catch (error: any) {
       console.log("Sign up error", error);
       setAuthError(
@@ -158,7 +158,7 @@ export default function SignUpForm() {
                 onClick={async () => {
                   if (signUp) {
                     await signUp.prepareEmailAddressVerification({
-                      strategy: "email_code",
+                      strategy: "email_code"
                     });
                   }
                 }}

@@ -2,9 +2,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { SignOutButton, useUser, UserButton } from '@clerk/nextjs'
 import UploadExample from '@/components/FileUpload'
-import { Image, ImageKitProvider } from '@imagekit/next'
 import prettyBytes from 'pretty-bytes';
-import { ArrowBigLeft, Copy, ExternalLink, File, Folder, FolderPlus, Share2, Trash2Icon } from 'lucide-react'
+import { ArrowBigLeft, ExternalLink, File, Folder, FolderPlus, Share2, Trash2Icon } from 'lucide-react'
 import { Bounce, ToastContainer, toast } from 'react-toastify';
 import dateFormat from 'dateformat'
 

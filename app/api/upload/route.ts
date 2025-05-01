@@ -1,7 +1,6 @@
 import { db } from "@/lib/db";
 import { files } from "@/lib/db/schema";
 import { auth } from "@clerk/nextjs/server";
-import { uuid } from "drizzle-orm/gel-core";
 import { NextResponse } from "next/server";
 
 
@@ -15,6 +14,10 @@ export async function POST(request: NextResponse) {
         const { imagekit, userId: bodyUserId, parentId } = body;
         if (!imagekit || !imagekit.url) {
             return NextResponse.json({ error: "Invalid imagekit data" }, { status: 400 });
+        }
+
+        if(userId !== bodyUserId) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
         const fileData = {
