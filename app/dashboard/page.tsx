@@ -1,6 +1,6 @@
 "use client"
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { SignOutButton, useUser, UserButton } from '@clerk/nextjs'
+import { useUser, UserButton } from '@clerk/nextjs'
 import UploadExample from '@/components/FileUpload'
 import prettyBytes from 'pretty-bytes'
 import { ArrowBigLeft, ExternalLink, File, Folder, FolderPlus, Share2, Trash2Icon, Search, Grid2X2, ListFilter, Loader2, Sun, Moon } from 'lucide-react'
@@ -13,12 +13,7 @@ import {
 } from "@/components/ui/card"
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+
 import { useTheme } from 'next-themes'
 
 export interface File {
