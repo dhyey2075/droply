@@ -11,10 +11,8 @@ import {
 import { useState, type RefObject } from "react";
 import { Button } from "@/components/ui/button";
 import { Upload } from "lucide-react";
-import ImageKit from "imagekit";
-import { Bounce, ToastContainer, toast } from 'react-toastify'
+import { Bounce, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
-import { not } from "drizzle-orm";
 
 interface UploadExampleProps {
     fileInputRef: RefObject<HTMLInputElement | null>;
