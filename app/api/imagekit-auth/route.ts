@@ -8,7 +8,7 @@ const imagekit = new ImageKit({
     urlEndpoint: process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || "",
 })
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
     try {
         const { userId } = await auth();
 
