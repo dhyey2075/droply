@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { files } from "@/lib/db/schema";
 import { auth } from "@clerk/nextjs/server";
+import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -17,6 +18,16 @@ export async function POST(request: NextRequest) {
 
         if(userId !== bodyUserId) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const Files = await db.select().from(files).where(
+            eq(files.userId, userId)
+        )
+
+        const FilesOnly = Files.map(file => !file.isFolder)
+
+        if(FilesOnly.length > 5 && userId !== "user_2wGFl6FXxK7YVR6Vh1DiThD3rkS"){
+            return NextResponse.json({ error: "File limit exceeded" }, { status: 400 });
         }
 
         const fileData = {

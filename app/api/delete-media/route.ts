@@ -13,7 +13,7 @@ export async function DELETE(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { fileId, userId: bodyUserId } = body;
+        const { fileId, userId: bodyUserId, originalFileId } = body;
         if (userId !== bodyUserId) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
@@ -23,6 +23,14 @@ export async function DELETE(request: NextRequest) {
             privateKey: process.env.IMAGEKIT_PRIVATE_KEY || "",
             urlEndpoint: process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || "",
         });
+
+        if(!fileId) {
+            try {
+                await imagekit.deleteFile(originalFileId);
+            } catch (e) {
+                console.error(`Failed to delete file from ImageKit: ${originalFileId}`, e);
+            }
+        }
 
         // Get file info from db to retrieve file path/key for ImageKit
         const [fileRecord] = await db.select().from(files).where(eq(files.id, fileId));

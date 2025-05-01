@@ -11,6 +11,10 @@ import {
 import { useState, type RefObject } from "react";
 import { Button } from "@/components/ui/button";
 import { Upload } from "lucide-react";
+import ImageKit from "imagekit";
+import { Bounce, ToastContainer, toast } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
+import { not } from "drizzle-orm";
 
 interface UploadExampleProps {
     fileInputRef: RefObject<HTMLInputElement | null>;
@@ -24,6 +28,18 @@ const UploadExample: React.FC<UploadExampleProps> = ({ fileInputRef, parentId, o
     const { user } = useUser();
 
     const abortController = new AbortController();
+
+    const notifyError = (message: string) => toast.error(message, {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "dark",
+        transition: Bounce,
+      })
 
     const authenticator = async () => {
         try {
@@ -49,6 +65,12 @@ const UploadExample: React.FC<UploadExampleProps> = ({ fileInputRef, parentId, o
 
         setIsUploading(true);
         const file = fileInput.files[0];
+
+        if(file.size > 100000000) {
+            alert("File size exceeds 100MB limit. Please choose a smaller file.");
+            setIsUploading(false);
+            return;
+        }
 
         try {
             const authParams = await authenticator();
@@ -80,7 +102,24 @@ const UploadExample: React.FC<UploadExampleProps> = ({ fileInputRef, parentId, o
             });
             
             if (!response.ok) {
-                throw new Error('Failed to save file information');
+                const data = await response.json();
+                notifyError(data.error || "Failed to save file information");
+                const response2 = await fetch("/api/delete-media", {
+                    method: "DELETE",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        originalFileId: uploadResponse.fileId,
+                        userId: user?.id
+                    })
+                });
+                if (!response2.ok) {
+                    const data = await response2.json();
+                    notifyError(data.error || "Failed to delete file from ImageKit");
+                }
+                throw new Error(data.error || "Failed to save file information");
+                
             }
 
             // Reset the file input and progress
@@ -116,6 +155,7 @@ const UploadExample: React.FC<UploadExampleProps> = ({ fileInputRef, parentId, o
                 ref={fileInputRef}
                 className="hidden"
                 onChange={handleUpload}
+                accept="image/*,application/pdf"
             />
             <Button
                 variant="default"
