@@ -10,7 +10,8 @@ export const files = pgTable("files", {
     type: text("type").notNull(),
 
     fileUrl: text("file_url").notNull(),
-    thumbnailUrl: text("thumbnail_url").notNull(),
+    fileId: text("imagekit_file_id").notNull(),
+    thumbnailUrl: text("thumbnail_url"),
 
     userId: text("user_id").notNull(),
     parentId: uuid("parent_id"),  // Made nullable for root folders
