@@ -4,7 +4,7 @@ import { SignOutButton, useUser, UserButton } from '@clerk/nextjs'
 import UploadExample from '@/components/FileUpload'
 import { Image, ImageKitProvider } from '@imagekit/next'
 import prettyBytes from 'pretty-bytes';
-import { ArrowBigLeft, ExternalLink, File, Folder, FolderPlus } from 'lucide-react'
+import { ArrowBigLeft, Copy, ExternalLink, File, Folder, FolderPlus, Share2, Trash2Icon } from 'lucide-react'
 import { Bounce, ToastContainer, toast } from 'react-toastify';
 import dateFormat from 'dateformat'
 
@@ -179,7 +179,7 @@ const Page: React.FC = () => {
                         }
                       }}
                     >
-                      Delete
+                      <Trash2Icon color='red'/>
                     </div>
                   </div>
                   ) : (
@@ -207,6 +207,38 @@ const Page: React.FC = () => {
                     <p>{media.type}</p>
                     <p>{dateFormat(media.createdAt)}</p>
                     <p><a href={media.fileUrl} target='_blank'><ExternalLink/></a></p>
+                    <button
+                      onClick={async () => 
+                        {
+                          const response = await fetch('/api/delete-media', {
+                            method: 'DELETE',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                              fileId: media.id,
+                              userId: user.id,
+                            }),
+                          })
+                          const data = await response.json()
+                          if (data.message) {
+                            fetchUserMedia()
+                            notifySuccess("Media deleted successfully")
+                          } else {
+                            notifyError(data.message)
+                            console.error(data.message)
+                          }
+                        }
+                      }
+                    >
+                      <Trash2Icon color='red'/>
+                    </button>
+                    <div>
+                      <Share2 onClick={() => {
+                        navigator.clipboard.writeText(media.fileUrl)
+                        notifySuccess("File URL copied to clipboard")
+                      }} />  
+                    </div>
                   </div>
                   )}
                 </div>)
