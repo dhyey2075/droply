@@ -109,9 +109,9 @@ export default function SignUpForm() {
       <Card className="w-full max-w-md border border-indigo-100 bg-white shadow-2xl rounded-xl overflow-hidden">
         <CardHeader className="flex flex-col gap-2 items-center pb-4 pt-8 bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
           <h1 className="text-3xl font-bold">Verify Your Email</h1>
-          <p className="text-indigo-100 text-center">
-            We've sent a verification code to your email
-          </p>
+            <p className="text-indigo-100 text-center">
+            We have sent a verification code to your email
+            </p>
         </CardHeader>
 
         <Divider className="opacity-10" />
@@ -155,7 +155,7 @@ export default function SignUpForm() {
 
           <div className="mt-8 text-center">
             <p className="text-sm text-gray-600">
-              Didn't receive a code?{" "}
+              Did not receive a code?{" "}
               <button
                 onClick={async () => {
                   if (signUp) {
