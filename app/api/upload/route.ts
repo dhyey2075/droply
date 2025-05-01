@@ -1,10 +1,9 @@
 import { db } from "@/lib/db";
 import { files } from "@/lib/db/schema";
 import { auth } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-
-export async function POST(request: NextResponse) {
+export async function POST(request: NextRequest) {
     try {
         const { userId } = await auth();
         if (!userId) {

@@ -1,5 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import ImageKit from "imagekit";
 
 const imagekit = new ImageKit({
@@ -8,7 +8,7 @@ const imagekit = new ImageKit({
     urlEndpoint: process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || "",
 })
 
-export async function GET() {
+export async function GET(request: NextRequest) {
     try {
         const { userId } = await auth();
 
