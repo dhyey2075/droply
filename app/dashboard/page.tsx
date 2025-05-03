@@ -35,6 +35,7 @@ export interface File {
 
 const Page: React.FC = () => {
   const [media, setMedia] = useState<File[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [folderName, setFolderName] = useState<string>('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const uploadRef = useRef<HTMLInputElement>(null)
@@ -45,14 +46,22 @@ const Page: React.FC = () => {
   const { theme, setTheme } = useTheme()
 
   const fetchUserMedia = useCallback(async () => {
-    const response = await fetch('/api/media', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
-    const data = await response.json()
-    setMedia(data)
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/media', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      const data = await response.json()
+      setMedia(data)
+    } catch (error) {
+      console.error('Error fetching media:', error)
+      notifyError('Failed to load files')
+    } finally {
+      setIsLoading(false)
+    }
   }, [])
 
   const notifyError = (message: string) => toast.error(message, {
@@ -203,112 +212,124 @@ const Page: React.FC = () => {
           </div>
         </div>
 
-        <div className={viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" : "space-y-2"}>
-          {currentFiles.map(item => (
-            <Card key={item.id} className={`${viewMode === 'grid' ? '' : 'p-4'} hover:shadow-md transition-shadow`}>
-              <CardContent className={`${viewMode === 'grid' ? 'p-4' : 'p-0'}`}>
-                <div className="flex items-center gap-4">
-                  <div className="flex-shrink-0">
-                    {item.isFolder ? (
-                      <Folder className="h-10 w-10 text-blue-500" />
-                    ) : (
-                      <File className="h-10 w-10 text-gray-500" />
-                    )}
-                  </div>
-                  
-                  <div className="flex-grow min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <div
-                        className={`truncate ${item.isFolder ? 'cursor-pointer hover:text-blue-500' : ''}`}
-                        onClick={() => {
-                          if (item.isFolder) {
-                            setFolderHierarchy(prev => [...prev, [item.id, item.name]])
-                            fetchUserMedia()
-                          }
-                        }}
-                      >
-                        <span className="font-medium">{item.name}</span>
-                      </div>
-                      
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {!item.isFolder && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                navigator.clipboard.writeText(item.fileUrl)
-                                notifySuccess("File URL copied to clipboard")
-                              }}
-                            >
-                              <Share2 className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => window.open(item.fileUrl, '_blank')}
-                            >
-                              <ExternalLink className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-red-500 hover:text-red-700"
-                          disabled={deletingFiles.has(item.id)}
-                          onClick={async () => {
-                            try {
-                              setDeletingFiles(prev => new Set(prev).add(item.id))
-                              const endpoint = item.isFolder ? '/api/folders/delete' : '/api/delete-media'
-                              const response = await fetch(endpoint, {
-                                method: 'DELETE',
-                                headers: {
-                                  'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({
-                                  fileId: item.id,
-                                  userId: user.id,
-                                }),
-                              })
-                              const data = await response.json()
-                              if (data.message) {
-                                fetchUserMedia()
-                                notifySuccess(`${item.isFolder ? 'Folder' : 'File'} deleted successfully`)
-                              } else {
-                                notifyError(data.message)
-                              }
-                            } finally {
-                              setDeletingFiles(prev => {
-                                const newSet = new Set(prev)
-                                newSet.delete(item.id)
-                                return newSet
-                              })
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+            <Loader2 className="h-8 w-8 animate-spin mb-4" />
+            <p>Loading your files...</p>
+          </div>
+        ) : currentFiles.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+            <Folder className="h-8 w-8 mb-4" />
+            <p>No files in this folder</p>
+          </div>
+        ) : (
+          <div className={viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" : "space-y-2"}>
+            {currentFiles.map(item => (
+              <Card key={item.id} className={`${viewMode === 'grid' ? '' : 'p-4'} hover:shadow-md transition-shadow`}>
+                <CardContent className={`${viewMode === 'grid' ? 'p-4' : 'p-0'}`}>
+                  <div className="flex items-center gap-4">
+                    <div className="flex-shrink-0">
+                      {item.isFolder ? (
+                        <Folder className="h-10 w-10 text-blue-500" />
+                      ) : (
+                        <File className="h-10 w-10 text-gray-500" />
+                      )}
+                    </div>
+                    
+                    <div className="flex-grow min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <div
+                          className={`truncate ${item.isFolder ? 'cursor-pointer hover:text-blue-500' : ''}`}
+                          onClick={() => {
+                            if (item.isFolder) {
+                              setFolderHierarchy(prev => [...prev, [item.id, item.name]])
+                              fetchUserMedia()
                             }
                           }}
                         >
-                          {deletingFiles.has(item.id) ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2Icon className="h-4 w-4" />
+                          <span className="font-medium">{item.name}</span>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {!item.isFolder && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(item.fileUrl)
+                                  notifySuccess("File URL copied to clipboard")
+                                }}
+                              >
+                                <Share2 className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => window.open(item.fileUrl, '_blank')}
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </Button>
+                            </>
                           )}
-                        </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-red-500 hover:text-red-700"
+                            disabled={deletingFiles.has(item.id)}
+                            onClick={async () => {
+                              try {
+                                setDeletingFiles(prev => new Set(prev).add(item.id))
+                                const endpoint = item.isFolder ? '/api/folders/delete' : '/api/delete-media'
+                                const response = await fetch(endpoint, {
+                                  method: 'DELETE',
+                                  headers: {
+                                    'Content-Type': 'application/json',
+                                  },
+                                  body: JSON.stringify({
+                                    fileId: item.id,
+                                    userId: user.id,
+                                  }),
+                                })
+                                const data = await response.json()
+                                if (data.message) {
+                                  fetchUserMedia()
+                                  notifySuccess(`${item.isFolder ? 'Folder' : 'File'} deleted successfully`)
+                                } else {
+                                  notifyError(data.message)
+                                }
+                              } finally {
+                                setDeletingFiles(prev => {
+                                  const newSet = new Set(prev)
+                                  newSet.delete(item.id)
+                                  return newSet
+                                })
+                              }
+                            }}
+                          >
+                            {deletingFiles.has(item.id) ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2Icon className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
                       </div>
+                      
+                      {!item.isFolder && (
+                        <div className="mt-1 flex items-center gap-4 text-sm text-muted-foreground">
+                          <span>{prettyBytes(item.size)}</span>
+                          <span>·</span>
+                          <span>{dateFormat(item.createdAt, "mmm d, yyyy")}</span>
+                        </div>
+                      )}
                     </div>
-                    
-                    {!item.isFolder && (
-                      <div className="mt-1 flex items-center gap-4 text-sm text-muted-foreground">
-                        <span>{prettyBytes(item.size)}</span>
-                        <span>·</span>
-                        <span>{dateFormat(item.createdAt, "mmm d, yyyy")}</span>
-                      </div>
-                    )}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </main>
       
       <ToastContainer />
