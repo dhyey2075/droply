@@ -45,23 +45,13 @@ const FormField = <
 const useFormField = () => {
   const fieldContext = React.useContext(FormFieldContext)
   const itemContext = React.useContext(FormItemContext)
-  
+  const { getFieldState } = useFormContext()
+  const formState = useFormState({ name: fieldContext.name })
+  const fieldState = getFieldState(fieldContext.name, formState)
+
   if (!fieldContext) {
     throw new Error("useFormField should be used within <FormField>")
   }
-
-  const formContext = useFormContext();
-  
-  if (!formContext) {
-    throw new Error("useFormField should be used within a FormProvider")
-  }
-  
-  const { getFieldState } = formContext
-  const formState = useFormState({ 
-    name: fieldContext.name,
-    control: formContext.control
-  })
-  const fieldState = getFieldState(fieldContext.name, formState)
 
   const { id } = itemContext
 
@@ -101,106 +91,68 @@ function FormLabel({
   className,
   ...props
 }: React.ComponentProps<typeof LabelPrimitive.Root>) {
-  try {
-    const { error, formItemId } = useFormField()
-    return (
-      <Label
-        data-slot="form-label"
-        data-error={!!error}
-        className={cn("data-[error=true]:text-destructive", className)}
-        htmlFor={formItemId}
-        {...props}
-      />
-    )
-  } catch (e) {
-    // Fallback when used outside form context
-    return (
-      <Label
-        data-slot="form-label"
-        className={className}
-        {...props}
-      />
-    )
-  }
+  const { error, formItemId } = useFormField()
+
+  return (
+    <Label
+      data-slot="form-label"
+      data-error={!!error}
+      className={cn("data-[error=true]:text-destructive", className)}
+      htmlFor={formItemId}
+      {...props}
+    />
+  )
 }
 
 function FormControl({ ...props }: React.ComponentProps<typeof Slot>) {
-  try {
-    const { error, formItemId, formDescriptionId, formMessageId } = useFormField()
-    return (
-      <Slot
-        data-slot="form-control"
-        id={formItemId}
-        aria-describedby={
-          !error
-            ? `${formDescriptionId}`
-            : `${formDescriptionId} ${formMessageId}`
-        }
-        aria-invalid={!!error}
-        {...props}
-      />
-    )
-  } catch (e) {
-    // Fallback when used outside form context
-    return <Slot data-slot="form-control" {...props} />
-  }
+  const { error, formItemId, formDescriptionId, formMessageId } = useFormField()
+
+  return (
+    <Slot
+      data-slot="form-control"
+      id={formItemId}
+      aria-describedby={
+        !error
+          ? `${formDescriptionId}`
+          : `${formDescriptionId} ${formMessageId}`
+      }
+      aria-invalid={!!error}
+      {...props}
+    />
+  )
 }
 
 function FormDescription({ className, ...props }: React.ComponentProps<"p">) {
-  try {
-    const { formDescriptionId } = useFormField()
-    return (
-      <p
-        data-slot="form-description"
-        id={formDescriptionId}
-        className={cn("text-muted-foreground text-sm", className)}
-        {...props}
-      />
-    )
-  } catch (e) {
-    // Fallback when used outside form context
-    return (
-      <p
-        data-slot="form-description"
-        className={cn("text-muted-foreground text-sm", className)}
-        {...props}
-      />
-    )
-  }
+  const { formDescriptionId } = useFormField()
+
+  return (
+    <p
+      data-slot="form-description"
+      id={formDescriptionId}
+      className={cn("text-muted-foreground text-sm", className)}
+      {...props}
+    />
+  )
 }
 
 function FormMessage({ className, ...props }: React.ComponentProps<"p">) {
-  try {
-    const { error, formMessageId } = useFormField()
-    const body = error ? String(error?.message ?? "") : props.children
+  const { error, formMessageId } = useFormField()
+  const body = error ? String(error?.message ?? "") : props.children
 
-    if (!body) {
-      return null
-    }
-
-    return (
-      <p
-        data-slot="form-message"
-        id={formMessageId}
-        className={cn("text-destructive text-sm", className)}
-        {...props}
-      >
-        {body}
-      </p>
-    )
-  } catch (e) {
-    // Fallback when there's no form context
-    if (!props.children) {
-      return null
-    }
-    return (
-      <p
-        data-slot="form-message"
-        className={cn("text-destructive text-sm", className)}
-        {...props}
-      />
-    )
+  if (!body) {
+    return null
   }
+
+  return (
+    <p
+      data-slot="form-message"
+      id={formMessageId}
+      className={cn("text-destructive text-sm", className)}
+      {...props}
+    >
+      {body}
+    </p>
+  )
 }
 
 export {
