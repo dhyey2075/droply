@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { ThemeProvider } from "@/components/theme-provider";
+import GoogleAdsense from "@/components/GoogleAdSense";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,10 +35,9 @@ export default function RootLayout({
         >
           <ThemeProvider>
             {children}
+            <GoogleAdsense pId="ca-pub-2220190122729886" />
           </ThemeProvider>
         </body>
-        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2220190122729886"
-          crossOrigin="anonymous"></script>
       </html>
     </ClerkProvider>
   );
