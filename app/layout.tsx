@@ -4,6 +4,7 @@ import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { ThemeProvider } from "@/components/theme-provider";
 import GoogleAdsense from "@/components/GoogleAdSense";
+import Script from "next/script";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,12 +31,21 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en">
+        <head>
+          <Script src="https://cmp.gatekeeperconsent.com/min.js" data-cfasync="false"></Script>
+          <Script src="https://the.gatekeeperconsent.com/cmp.min.js" data-cfasync="false"></Script>
+          <Script async src="//www.ezojs.com/ezoic/sa.min.js"></Script>
+          <Script>
+              window.ezstandalone = window.ezstandalone || {};
+              ezstandalone.cmd = ezstandalone.cmd || [];
+          </Script>
+        </head>
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
           <ThemeProvider>
-            {children}
             <GoogleAdsense pId="ca-pub-2220190122729886" />
+            {children}
           </ThemeProvider>
         </body>
       </html>
