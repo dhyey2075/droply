@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useUser, UserButton } from '@clerk/nextjs'
 import UploadExample from '@/components/FileUpload'
 import prettyBytes from 'pretty-bytes'
-import { ArrowBigLeft, ExternalLink, File, Folder, FolderPlus, Share2, Trash2Icon, Search, Grid2X2, ListFilter, Loader2, Sun, Moon } from 'lucide-react'
+import { ArrowBigLeft, ExternalLink, File, Folder, FolderPlus, Share2, Trash2Icon, Grid2X2, ListFilter, Loader2 } from 'lucide-react'
 import { Bounce, ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import dateFormat from 'dateformat'
@@ -13,8 +13,6 @@ import {
 } from "@/components/ui/card"
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-
-import { useTheme } from 'next-themes'
 
 export interface File {
   id: string
@@ -42,7 +40,6 @@ const Page: React.FC = () => {
   const [deletingFiles, setDeletingFiles] = useState<Set<string>>(new Set())
 
   const { isSignedIn, user } = useUser()
-  const { theme, setTheme } = useTheme()
 
   const fetchUserMedia = useCallback(async () => {
     const response = await fetch('/api/media', {
