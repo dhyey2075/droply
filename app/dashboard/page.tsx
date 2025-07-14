@@ -100,11 +100,6 @@ const Page: React.FC = () => {
             <div className="flex items-center gap-4">
               <h1 className="text-2xl font-bold">Droply</h1>
               <div className="relative">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search files..."
-                  className="pl-9 w-[300px]"
-                />
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -115,7 +110,7 @@ const Page: React.FC = () => {
               >
                 {viewMode === 'grid' ? <ListFilter className="h-5 w-5" /> : <Grid2X2 className="h-5 w-5" />}
               </Button>
-              <Button
+              {/* <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => {
@@ -123,7 +118,7 @@ const Page: React.FC = () => {
                 }}
               >
                 {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-              </Button>
+              </Button> */}
               <UserButton />
             </div>
           </div>
