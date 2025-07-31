@@ -37,12 +37,12 @@ export async function DELETE(request: NextRequest) {
         if (fileRecord && fileRecord.fileId) {
             try {
                 await imagekit.deleteFile(fileRecord.fileId);
+                await db.delete(files).where(eq(files.id, fileId));
             } catch (e) {
                 console.error(`Failed to delete file from ImageKit: ${fileRecord.fileId}`, e);
             }
         }
         
-        await db.delete(files).where(eq(files.id, fileId));
 
         return NextResponse.json({ message: "Media deleted successfully" }, { status: 200 });
     } catch (error) {
