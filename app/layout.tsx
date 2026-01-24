@@ -29,7 +29,7 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en">
+      <html lang="en" suppressHydrationWarning>
         <head>
           <Script src="https://cmp.gatekeeperconsent.com/min.js" data-cfasync="false"></Script>
           <Script src="https://the.gatekeeperconsent.com/cmp.min.js" data-cfasync="false"></Script>

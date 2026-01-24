@@ -120,3 +120,40 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Custom styles for file-icons-js to make them larger */
+.file-icon-large {
+  font-size: 2rem !important;
+  line-height: 1;
+}
+
+@media (min-width: 640px) {
+  .file-icon-large {
+    font-size: 2.5rem !important;
+  }
+}
+
+.file-icon-large:before {
+  font-size: 2rem !important;
+}
+
+@media (min-width: 640px) {
+  .file-icon-large:before {
+    font-size: 2.5rem !important;
+  }
+}
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Touch manipulation for better mobile performance */
+.touch-manipulation {
+  touch-action: manipulation;
+}

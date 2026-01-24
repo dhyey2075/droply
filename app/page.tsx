@@ -8,23 +8,23 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <header className="container mx-auto px-4 py-20">
-        <div className="flex flex-col items-center text-center gap-8 max-w-3xl mx-auto">
-          <h1 className="text-4xl sm:text-6xl font-bold tracking-tight">
+      <header className="container mx-auto px-4 sm:px-6 py-12 sm:py-20">
+        <div className="flex flex-col items-center text-center gap-6 sm:gap-8 max-w-3xl mx-auto">
+          <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold tracking-tight px-2">
             Share files with ease and{" "}
             <span className="text-blue-500">security</span>
           </h1>
-          <p className="text-muted-foreground text-lg sm:text-xl max-w-2xl">
+          <p className="text-muted-foreground text-base sm:text-lg md:text-xl max-w-2xl px-4">
             Droply provides a secure, fast, and intuitive way to store and share your files. Built for individuals and teams who value simplicity and privacy.
           </p>
-          <div className="flex gap-4 mt-4">
-            <Link href="/signup">
-              <Button size="lg" className="gap-2">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-4 w-full sm:w-auto px-4 sm:px-0">
+            <Link href="/signup" className="w-full sm:w-auto">
+              <Button size="lg" className="gap-2 w-full sm:w-auto touch-manipulation">
                 Get Started <ArrowUpRight className="h-4 w-4" />
               </Button>
             </Link>
-            <Link href="/signin">
-              <Button variant="outline" size="lg">
+            <Link href="/signin" className="w-full sm:w-auto">
+              <Button variant="outline" size="lg" className="w-full sm:w-auto touch-manipulation">
                 Sign In
               </Button>
             </Link>
@@ -33,9 +33,9 @@ export default function Home() {
       </header>
 
       {/* Features Section */}
-      <section className="container mx-auto px-4 py-20 border-t">
-        <h2 className="text-3xl font-bold text-center mb-16">Why Choose Droply?</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <section className="container mx-auto px-4 sm:px-6 py-12 sm:py-20 border-t">
+        <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 sm:mb-16 px-4">Why Choose Droply?</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
           <div className="flex flex-col items-center text-center gap-4 p-6">
             <div className="h-12 w-12 rounded-full bg-blue-500/10 flex items-center justify-center">
               <FileUp className="h-6 w-6 text-blue-500" />
@@ -96,17 +96,17 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="container mx-auto px-4 py-20 border-t">
-        <div className="bg-blue-500 rounded-2xl p-8 sm:p-12 text-white text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+      <section className="container mx-auto px-4 sm:px-6 py-12 sm:py-20 border-t">
+        <div className="bg-blue-500 rounded-2xl p-6 sm:p-8 md:p-12 text-white text-center">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4 px-2">
             Ready to get started?
           </h2>
-          <p className="text-blue-100 mb-8 max-w-xl mx-auto">
+          <p className="text-blue-100 mb-6 sm:mb-8 max-w-xl mx-auto px-4 text-sm sm:text-base">
             Join thousands of users who trust Droply for their file sharing needs.
           </p>
-          <div className="flex gap-4 justify-center">
-            <Link href="/signup">
-              <Button size="lg" variant="secondary" className="gap-2">
+          <div className="flex justify-center px-4">
+            <Link href="/signup" className="w-full sm:w-auto">
+              <Button size="lg" variant="secondary" className="gap-2 w-full sm:w-auto touch-manipulation">
                 Create Account <ArrowUpRight className="h-4 w-4" />
               </Button>
             </Link>
