@@ -41,3 +41,5 @@ yarn-error.log*
 next-env.d.ts
 
 secret
+ONEDRIVE_SETUP.md
+GOOGLE_DRIVE_SETUP.md

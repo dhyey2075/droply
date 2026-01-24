@@ -37,5 +37,33 @@ export const filesRelations = relations(files, ({ one, many }) => ({
     })
 }));
 
+export const googleDriveTokens = pgTable("google_drive_tokens", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull().unique(),
+    accessToken: text("access_token").notNull(),
+    refreshToken: text("refresh_token"),
+    tokenType: text("token_type").default("Bearer"),
+    expiryDate: timestamp("expiry_date"),
+    scope: text("scope"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull()
+});
+
+export const oneDriveTokens = pgTable("onedrive_tokens", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: text("user_id").notNull().unique(),
+    accessToken: text("access_token").notNull(),
+    refreshToken: text("refresh_token"),
+    tokenType: text("token_type").default("Bearer"),
+    expiryDate: timestamp("expiry_date"),
+    scope: text("scope"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull()
+});
+
 export type File = typeof files.$inferSelect;
 export type NewFile = typeof files.$inferInsert;
+export type GoogleDriveToken = typeof googleDriveTokens.$inferSelect;
+export type NewGoogleDriveToken = typeof googleDriveTokens.$inferInsert;
+export type OneDriveToken = typeof oneDriveTokens.$inferSelect;
+export type NewOneDriveToken = typeof oneDriveTokens.$inferInsert;
