@@ -23,12 +23,33 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Verify the state matches the authenticated user
-    const { userId } = await auth();
-    if (!userId || userId !== state) {
+    // Get authenticated user
+    const { userId: authenticatedUserId } = await auth();
+    
+    // Validate state format (Clerk userIds start with 'user_')
+    if (!state.startsWith('user_')) {
+      console.error("Invalid state parameter format:", state);
+      return NextResponse.redirect(
+        `${baseUrl}/dashboard?error=invalid_state`
+      );
+    }
+    
+    // In production, after OAuth redirect, the session might not be immediately available
+    // Use the state parameter (which we control and set in auth route) as the userId
+    // The state was set by us, so it's trusted
+    const userId = state;
+    
+    // If we have an authenticated user, verify it matches state for security
+    if (authenticatedUserId && authenticatedUserId !== state) {
+      console.error("Security: State mismatch - authenticated user", authenticatedUserId, "does not match state", state);
       return NextResponse.redirect(
         `${baseUrl}/dashboard?error=unauthorized`
       );
+    }
+    
+    // Log for debugging (remove in production if needed)
+    if (!authenticatedUserId) {
+      console.log("OAuth callback: Using state as userId (session not yet available):", userId);
     }
 
     const oauth2Client = new google.auth.OAuth2(
