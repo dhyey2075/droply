@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; style-src * 'unsafe-inline'; script-src * 'unsafe-inline' 'unsafe-eval';">
+    <title>Droply</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .loader {
+            text-align: center;
+        }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    <script>
+        // This file is used by Capacitor as an entry point
+        // In development, Capacitor will use server.url to load the Next.js app
+        // In production, you should deploy Next.js and point to that URL
+        
+        // If running in Capacitor and server.url is configured, it will automatically redirect
+        // Otherwise, show loading message
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if we're in Capacitor
+            if (window.Capacitor) {
+                console.log('Running in Capacitor');
+            } else {
+                console.log('Running in browser - redirecting to Next.js server');
+                // For browser testing, redirect to localhost
+                setTimeout(() => {
+                    window.location.href = 'http://localhost:3000';
+                }, 1000);
+            }
+        });
+    </script>
+</head>
+<body>
+    <div class="loader">
+        <div class="spinner"></div>
+        <h2>Loading Droply...</h2>
+        <p style="font-size: 14px; opacity: 0.8;">Please wait while we connect to the server</p>
+    </div>
+</body>
+</html>

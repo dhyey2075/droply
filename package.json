@@ -5,14 +5,24 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
+    "build:mobile": "CAPACITOR=1 next build",
     "start": "next start",
     "lint": "next lint",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "cap:sync": "npx cap sync",
+    "cap:add:android": "npx cap add android",
+    "cap:open:android": "npx cap open android",
+    "cap:copy": "npx cap copy",
+    "cap:run:android": "npx cap run android",
+    "android:dev": "node scripts/setup-android-dev.js && npm run cap:sync"
   },
   "dependencies": {
     "@azure/msal-node": "^5.0.2",
+    "@capacitor/android": "^8.0.1",
+    "@capacitor/cli": "^8.0.1",
+    "@capacitor/core": "^8.0.1",
     "@clerk/nextjs": "^6.18.0",
     "@heroui/button": "^2.2.17",
     "@heroui/card": "^2.2.16",

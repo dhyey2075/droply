@@ -56,6 +56,7 @@ const Page: React.FC = () => {
   const [renamingFile, setRenamingFile] = useState<File | null>(null)
   const [renameDialogOpen, setRenameDialogOpen] = useState<boolean>(false)
   const [newFileName, setNewFileName] = useState<string>('')
+  const [fileExtension, setFileExtension] = useState<string>('')
   const [isRenaming, setIsRenaming] = useState<boolean>(false)
   const [isCreatingFolder, setIsCreatingFolder] = useState<boolean>(false)
   const [activeSource, setActiveSource] = useState<'droply' | 'gdrive' | 'onedrive'>('droply')
@@ -289,7 +290,18 @@ const Page: React.FC = () => {
   }
 
   const handleRename = async () => {
-    if (!renamingFile || !newFileName.trim() || newFileName.trim() === renamingFile.name || isRenaming) return
+    if (!renamingFile || !newFileName.trim() || isRenaming) return
+
+    // For files, ensure the extension is preserved
+    let finalName = newFileName.trim()
+    if (!renamingFile.isFolder && fileExtension) {
+      // Remove any extension the user might have added and append the original extension
+      const nameWithoutExt = finalName.replace(/\.[^.]*$/, '')
+      finalName = nameWithoutExt + fileExtension
+    }
+
+    // Check if the name actually changed
+    if (finalName === renamingFile.name) return
 
     setIsRenaming(true)
     try {
@@ -300,7 +312,7 @@ const Page: React.FC = () => {
         },
         body: JSON.stringify({
           fileId: renamingFile.id,
-          newName: newFileName.trim(),
+          newName: finalName,
           userId: user?.id,
         }),
       })
@@ -311,7 +323,7 @@ const Page: React.FC = () => {
         if (renamingFile.isFolder) {
           setFolderHierarchy(prev => 
             prev.map(([id, name]) => 
-              id === renamingFile.id ? [id, newFileName.trim()] : [id, name]
+              id === renamingFile.id ? [id, finalName] : [id, name]
             )
           )
         }
@@ -319,6 +331,7 @@ const Page: React.FC = () => {
         setRenameDialogOpen(false)
         setRenamingFile(null)
         setNewFileName('')
+        setFileExtension('')
       } else {
         notifyError(data.message || 'Failed to rename')
       }
@@ -740,7 +753,24 @@ const Page: React.FC = () => {
                             className="h-9 w-9 sm:h-8 sm:w-8 rounded-lg hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/30 dark:hover:text-blue-400 transition-all duration-200 touch-manipulation"
                             onClick={() => {
                               setRenamingFile(item)
-                              setNewFileName(item.name)
+                              if (item.isFolder) {
+                                // For folders, use the full name
+                                setNewFileName(item.name)
+                                setFileExtension('')
+                              } else {
+                                // For files, extract the name without extension
+                                const lastDotIndex = item.name.lastIndexOf('.')
+                                if (lastDotIndex > 0) {
+                                  const nameWithoutExt = item.name.substring(0, lastDotIndex)
+                                  const ext = item.name.substring(lastDotIndex)
+                                  setNewFileName(nameWithoutExt)
+                                  setFileExtension(ext)
+                                } else {
+                                  // No extension found
+                                  setNewFileName(item.name)
+                                  setFileExtension('')
+                                }
+                              }
                               setRenameDialogOpen(true)
                             }}
                             title="Rename"
@@ -845,16 +875,37 @@ const Page: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <Input
-              value={newFileName}
-              onChange={(e) => setNewFileName(e.target.value)}
-              placeholder="Enter new name"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleRename()
-                }
-              }}
-            />
+            <div className="flex items-center gap-2">
+              <Input
+                value={newFileName}
+                onChange={(e) => {
+                  // Remove any extension the user tries to add
+                  let value = e.target.value
+                  if (!renamingFile?.isFolder && fileExtension) {
+                    // Remove any extension that might have been typed
+                    value = value.replace(/\.[^.]*$/, '')
+                  }
+                  setNewFileName(value)
+                }}
+                placeholder={renamingFile?.isFolder ? "Enter new folder name" : "Enter new file name"}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleRename()
+                  }
+                }}
+                className="flex-1"
+              />
+              {!renamingFile?.isFolder && fileExtension && (
+                <span className="text-muted-foreground text-sm font-medium px-2 py-2 border rounded-md bg-muted">
+                  {fileExtension}
+                </span>
+              )}
+            </div>
+            {!renamingFile?.isFolder && fileExtension && (
+              <p className="text-xs text-muted-foreground mt-2">
+                File extension {fileExtension} will be preserved
+              </p>
+            )}
           </div>
           <DialogFooter>
             <Button
@@ -864,13 +915,23 @@ const Page: React.FC = () => {
                 setRenameDialogOpen(false)
                 setRenamingFile(null)
                 setNewFileName('')
+                setFileExtension('')
               }}
             >
               Cancel
             </Button>
             <Button
               onClick={handleRename}
-              disabled={!newFileName.trim() || newFileName.trim() === renamingFile?.name || isRenaming}
+              disabled={!newFileName.trim() || isRenaming || (() => {
+                // Check if the name actually changed
+                if (!renamingFile) return true
+                let finalName = newFileName.trim()
+                if (!renamingFile.isFolder && fileExtension) {
+                  const nameWithoutExt = finalName.replace(/\.[^.]*$/, '')
+                  finalName = nameWithoutExt + fileExtension
+                }
+                return finalName === renamingFile.name
+              })()}
               className="rounded-lg hover:scale-105 transition-all duration-200 shadow-sm hover:shadow-md"
             >
               {isRenaming ? (
