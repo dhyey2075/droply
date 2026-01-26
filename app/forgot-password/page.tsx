@@ -58,17 +58,26 @@ export default function ForgotPasswordPage() {
     setError("");
 
     try {
-      const result = await signIn.resetPassword({
+      // First, attempt to verify the code
+      const attemptResult = await signIn.attemptFirstFactor({
         strategy: "reset_password_email_code",
         code,
-        password: newPassword,
       });
 
-      if (result.status === "complete") {
-        await setActive({ session: result.createdSessionId });
-        window.location.href = "/dashboard";
+      if (attemptResult.status === "needs_new_password") {
+        // Now reset the password
+        const result = await signIn.resetPassword({
+          password: newPassword,
+        });
+
+        if (result.status === "complete") {
+          await setActive({ session: result.createdSessionId });
+          window.location.href = "/dashboard";
+        } else {
+          setError("Password reset incomplete. Please try again.");
+        }
       } else {
-        setError("Password reset incomplete. Please try again.");
+        setError("Invalid verification code. Please try again.");
       }
     } catch (err: unknown) {
       const error = err as { errors?: Array<{ message?: string }> };
