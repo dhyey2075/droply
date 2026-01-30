@@ -53,10 +53,12 @@ export default function SignInForm() {
 
     try {
       // Type assertion needed because strategy might not be enabled in Clerk
+      // Absolute URLs required for OAuth in WebView/Android so Clerk and redirect URIs match
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
       await signIn.authenticateWithRedirect({
         strategy: strategy as Parameters<typeof signIn.authenticateWithRedirect>[0]['strategy'],
-        redirectUrl: "/signin/sso-callback",
-        redirectUrlComplete: "/dashboard",
+        redirectUrl: `${origin}/signin/sso-callback`,
+        redirectUrlComplete: `${origin}/dashboard`,
       });
     } catch (err: unknown) {
       console.error("OAuth error:", err);
