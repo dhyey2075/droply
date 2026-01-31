@@ -45,16 +45,15 @@ export default function SignInForm() {
     }
   };
 
-  const handleOAuthSignIn = async (strategy: string) => {
+  const handleOAuthSignIn = async (strategy: "oauth_google" | "oauth_github") => {
     if (!isLoaded) return;
 
     setIsLoading(true);
     setError("");
 
     try {
-      // Type assertion needed because strategy might not be enabled in Clerk
       await signIn.authenticateWithRedirect({
-        strategy: strategy as Parameters<typeof signIn.authenticateWithRedirect>[0]['strategy'],
+        strategy,
         redirectUrl: "/signin/sso-callback",
         redirectUrlComplete: "/dashboard",
       });
@@ -64,28 +63,21 @@ export default function SignInForm() {
       
       if (err && typeof err === 'object') {
         const error = err as { 
-          errors?: Array<{ message?: string; longMessage?: string; code?: string }>;
+          errors?: Array<{ message?: string; longMessage?: string }>;
           message?: string;
           status?: number;
         };
         
         if (error.errors && error.errors.length > 0) {
-          const firstError = error.errors[0];
-          errorMessage = firstError.longMessage || firstError.message || errorMessage;
-          
-          // Check if it's a strategy validation error
-          if (firstError.code === "form_identifier_not_found" || 
-              firstError.message?.includes("does not match one of the allowed values") ||
-              firstError.message?.includes("invalid")) {
-            if (strategy === "oauth_github") {
-              errorMessage = "GitHub OAuth is not enabled in your Clerk dashboard. Please enable it in User & Authentication → Social Connections.";
-            } else {
-              errorMessage = `${strategy} is not enabled. Please enable it in your Clerk dashboard.`;
-            }
-          }
+          errorMessage = error.errors[0].longMessage || error.errors[0].message || errorMessage;
         } else if (error.message) {
           errorMessage = error.message;
         }
+      }
+      
+      // Check if GitHub OAuth is not configured
+      if (strategy === "oauth_github" && errorMessage.toLowerCase().includes("invalid")) {
+        errorMessage = "GitHub OAuth is not configured. Please enable it in your Clerk dashboard.";
       }
       
       setError(errorMessage);
@@ -225,7 +217,6 @@ export default function SignInForm() {
             onClick={() => handleOAuthSignIn("oauth_github")}
             disabled={isLoading}
             className="w-full"
-            title="GitHub OAuth must be enabled in Clerk dashboard"
           >
             <svg className="mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
               <path
