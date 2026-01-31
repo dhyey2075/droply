@@ -1,6 +1,6 @@
 "use client"
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { useUser } from '@clerk/nextjs'
+import { useUser, UserButton } from '@clerk/nextjs'
 import { useTheme } from 'next-themes'
 import UploadExample from '@/components/FileUpload'
 import prettyBytes from 'pretty-bytes'
@@ -24,7 +24,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { UserProfileMenu } from "@/components/UserProfileMenu"
 
 export interface File {
   id: string
@@ -419,7 +418,12 @@ const Page: React.FC = () => {
                   )}
                 </Button>
               )}
-              <UserProfileMenu />
+              <div className="hidden sm:block">
+                <UserButton />
+              </div>
+              <div className="sm:hidden">
+                <UserButton />
+              </div>
             </div>
           </div>
         </div>
