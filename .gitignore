@@ -17,11 +17,6 @@
 /.next/
 /out/
 
-# capacitor
-/android/
-/ios/
-/.capacitor/
-
 # production
 /build
 
@@ -48,5 +43,3 @@ next-env.d.ts
 secret
 ONEDRIVE_SETUP.md
 GOOGLE_DRIVE_SETUP.md
-ANDROID_SETUP.md
-CAPACITOR_README.md
