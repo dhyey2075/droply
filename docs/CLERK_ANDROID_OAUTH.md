@@ -1,16 +1,8 @@
 # Clerk + Android (Capacitor) OAuth Setup
 
-If **Google Sign-In** in the Android app opens in an external browser or shows "Unauthorized request" / `authorization_invalid`, the app and dashboards need to be set up so OAuth runs inside the app.
+If **Google Sign-In** in the Android app shows "Unauthorized request" / `authorization_invalid`, the app and dashboards need to be set up for OAuth inside the Android WebView.
 
-## 0. Keep OAuth inside the app (capacitor.config.ts)
-
-**Problem:** By default, Capacitor opens any URL that isn’t your app host in the **system browser**. So when Clerk redirects to Google (accounts.google.com), the sign-in screen opens in Chrome instead of the app. When the user finishes, the session lives in the browser, not in the app WebView, so the app sees "authorization_invalid".
-
-**Fix:** In `capacitor.config.ts`, `server.allowNavigation` is set so that OAuth hosts (Google, Clerk, GitHub) load **inside the app WebView** instead of the external browser. The flow then stays in-app and the session is set in the same WebView.
-
-If you add other OAuth providers, add their host(s) to `server.allowNavigation` in `capacitor.config.ts`, then run `npx cap sync android`.
-
-## 1. WebView third-party cookies (already applied in CI)
+## 0. WebView third-party cookies (already applied in CI)
 
 OAuth in Android WebView needs **third-party cookies** enabled so Clerk and Google can complete the redirect flow. This is done by a custom `MainActivity` that calls `CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true)`.
 
