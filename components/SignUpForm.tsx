@@ -8,12 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Mail, Lock, AlertCircle } from "lucide-react";
+import { Loader2, Mail, Lock, User, AlertCircle } from "lucide-react";
 
 export default function SignUpForm() {
   const { isLoaded, signUp, setActive } = useSignUp();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [pendingVerification, setPendingVerification] = useState(false);
@@ -28,10 +30,11 @@ export default function SignUpForm() {
     setError("");
 
     try {
-      // Only email and password are allowed by Clerk API (first_name/last_name require Personalization in Dashboard)
       const result = await signUp.create({
         emailAddress: email,
         password,
+        firstName: firstName || undefined,
+        lastName: lastName || undefined,
       });
 
       // Send email verification code
@@ -84,12 +87,10 @@ export default function SignUpForm() {
 
     try {
       // Type assertion needed because strategy might not be enabled in Clerk
-      // Absolute URLs required for OAuth in WebView/Android so Clerk and redirect URIs match
-      const origin = typeof window !== "undefined" ? window.location.origin : "";
       await signUp.authenticateWithRedirect({
         strategy: strategy as Parameters<typeof signUp.authenticateWithRedirect>[0]['strategy'],
-        redirectUrl: `${origin}/signin/sso-callback`,
-        redirectUrlComplete: `${origin}/dashboard`,
+        redirectUrl: "/signin/sso-callback",
+        redirectUrlComplete: "/dashboard",
       });
     } catch (err: unknown) {
       console.error("OAuth error:", err);
@@ -221,6 +222,36 @@ export default function SignUpForm() {
               <span>{error}</span>
             </div>
           )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="firstName">First Name</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="firstName"
+                  type="text"
+                  placeholder="John"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  className="pl-9"
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Last Name</Label>
+              <Input
+                id="lastName"
+                type="text"
+                placeholder="Doe"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                disabled={isLoading}
+              />
+            </div>
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>

@@ -34,11 +34,6 @@ jobs:
         run: npx cap sync android
         # Writes server URL and config into android/app/src/main/assets/
 
-      - name: Apply WebView OAuth fix (third-party cookies for Google sign-in)
-        run: |
-          mkdir -p android/app/src/main/java/com/yourname/droply
-          cp scripts/android-MainActivity.java android/app/src/main/java/com/yourname/droply/MainActivity.java
-
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
