@@ -111,8 +111,11 @@ const Page: React.FC = () => {
     transition: Bounce,
   }), [])
 
-  const fetchUserMedia = useCallback(async () => {
-    setIsLoading(true)
+  const fetchUserMedia = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent ?? false
+    if (!silent) {
+      setIsLoading(true)
+    }
     try {
       const response = await fetch('/api/media', {
         method: 'GET',
@@ -121,12 +124,18 @@ const Page: React.FC = () => {
         },
       })
       const data = await response.json()
-      setMedia(data)
+      if (Array.isArray(data)) {
+        setMedia(data)
+      }
     } catch (error) {
-      notifyError('Failed to fetch files')
+      if (!silent) {
+        notifyError('Failed to fetch files')
+      }
       console.error('Error fetching files:', error)
     } finally {
-      setIsLoading(false)
+      if (!silent) {
+        setIsLoading(false)
+      }
     }
   }, [notifyError])
 
@@ -247,8 +256,14 @@ const Page: React.FC = () => {
       ? isLoadingGDrive 
       : isLoadingOneDrive
 
-  const handleFileUploadComplete = () => {
-    fetchUserMedia()
+  const handleFileUploadComplete = (file?: File) => {
+    if (file) {
+      setMedia(prev => {
+        if (prev.some(item => item.id === file.id)) return prev
+        return [file, ...prev]
+      })
+    }
+    void fetchUserMedia({ silent: true })
   }
 
   const getFileIconClass = (fileName: string): string => {
@@ -306,15 +321,20 @@ const Page: React.FC = () => {
       })
       const data = await response.json()
       if (data.success) {
-        fetchUserMedia()
-        // Update folder hierarchy if renaming a folder in the path
+        const nextName = newFileName.trim()
+        setMedia(prev =>
+          prev.map(item =>
+            item.id === renamingFile.id ? { ...item, name: nextName } : item
+          )
+        )
         if (renamingFile.isFolder) {
-          setFolderHierarchy(prev => 
-            prev.map(([id, name]) => 
-              id === renamingFile.id ? [id, newFileName.trim()] : [id, name]
+          setFolderHierarchy(prev =>
+            prev.map(([id, name]) =>
+              id === renamingFile.id ? [id, nextName] : [id, name]
             )
           )
         }
+        void fetchUserMedia({ silent: true })
         notifySuccess(data.message)
         setRenameDialogOpen(false)
         setRenamingFile(null)
@@ -459,7 +479,6 @@ const Page: React.FC = () => {
                   className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg hover:bg-accent hover:scale-105 transition-all duration-200 shadow-sm hover:shadow-md flex-shrink-0 touch-manipulation"
                   onClick={() => {
                     setFolderHierarchy(prev => prev.slice(0, prev.length - 1))
-                    fetchUserMedia()
                   }}
                   title="Go back"
                 >
@@ -483,7 +502,6 @@ const Page: React.FC = () => {
                         <button
                           onClick={() => {
                             setFolderHierarchy(prev => prev.slice(0, idx + 1))
-                            fetchUserMedia()
                           }}
                           className="px-1.5 sm:px-2 py-1 rounded-md hover:bg-accent hover:text-foreground transition-all duration-200 font-medium hover:scale-105 whitespace-nowrap touch-manipulation"
                         >
@@ -618,7 +636,13 @@ const Page: React.FC = () => {
                       const data = await response.json()
                       if (data.success) {
                         setFolderName('')
-                        fetchUserMedia()
+                        if (data.folder) {
+                          setMedia(prev => {
+                            if (prev.some(item => item.id === data.folder.id)) return prev
+                            return [data.folder, ...prev]
+                          })
+                        }
+                        void fetchUserMedia({ silent: true })
                         notifySuccess("Folder created successfully")
                       } else {
                         notifyError(data.message)
@@ -714,7 +738,6 @@ const Page: React.FC = () => {
                           if (item.isFolder) {
                             if (activeSource === 'droply') {
                               setFolderHierarchy(prev => [...prev, [item.id, item.name]])
-                              fetchUserMedia()
                             } else if (activeSource === 'gdrive') {
                               // Handle Google Drive folder navigation
                               const gdriveId = item.gdriveId || item.id
@@ -794,7 +817,12 @@ const Page: React.FC = () => {
                               })
                               const data = await response.json()
                               if (data.message) {
-                                fetchUserMedia()
+                                setMedia(prev =>
+                                  prev.filter(file =>
+                                    file.id !== item.id && file.parentId !== item.id
+                                  )
+                                )
+                                void fetchUserMedia({ silent: true })
                                 notifySuccess(`${item.isFolder ? 'Folder' : 'File'} deleted successfully`)
                               } else {
                                 notifyError(data.message)

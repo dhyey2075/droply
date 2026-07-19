@@ -14,10 +14,27 @@ import { Upload } from "lucide-react";
 import { Bounce, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
+interface UploadedFile {
+    id: string
+    name: string
+    path: string
+    size: number
+    type: string
+    fileUrl: string
+    thumbnailUrl: string
+    userId: string
+    parentId?: string | null
+    isFolder: boolean
+    isStarred: boolean
+    isTrash: boolean
+    createdAt: string
+    updatedAt: string
+}
+
 interface UploadExampleProps {
     fileInputRef: RefObject<HTMLInputElement | null>;
     parentId: string;
-    onUploadComplete?: () => void;
+    onUploadComplete?: (file?: UploadedFile) => void;
 }
 
 const UploadExample: React.FC<UploadExampleProps> = ({ fileInputRef, parentId, onUploadComplete }) => {
@@ -99,8 +116,8 @@ const UploadExample: React.FC<UploadExampleProps> = ({ fileInputRef, parentId, o
                 })
             });
             
+            const data = await response.json();
             if (!response.ok) {
-                const data = await response.json();
                 notifyError(data.error || "Failed to save file information");
                 const response2 = await fetch("/api/delete-media", {
                     method: "DELETE",
@@ -113,8 +130,8 @@ const UploadExample: React.FC<UploadExampleProps> = ({ fileInputRef, parentId, o
                     })
                 });
                 if (!response2.ok) {
-                    const data = await response2.json();
-                    notifyError(data.error || "Failed to delete file from ImageKit");
+                    const cleanupData = await response2.json();
+                    notifyError(cleanupData.error || "Failed to delete file from ImageKit");
                 }
                 throw new Error(data.error || "Failed to save file information");
                 
@@ -127,7 +144,7 @@ const UploadExample: React.FC<UploadExampleProps> = ({ fileInputRef, parentId, o
             setProgress(0);
             
             // Call the callback to update UI
-            onUploadComplete?.();
+            onUploadComplete?.(data.file);
             
         } catch (error) {
             if (error instanceof ImageKitAbortError) {
