@@ -4,6 +4,12 @@ import { SignIn } from "@clerk/nextjs";
 
 export default function SignInForm() {
   return (
-    <SignIn />
-  )
+    <SignIn
+      routing="path"
+      path="/signin"
+      signUpUrl="/signup"
+      forceRedirectUrl="/dashboard"
+      fallbackRedirectUrl="/dashboard"
+    />
+  );
 }

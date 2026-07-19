@@ -43,3 +43,6 @@ next-env.d.ts
 secret
 ONEDRIVE_SETUP.md
 GOOGLE_DRIVE_SETUP.md
+
+# clerk configuration (can include secrets)
+/.clerk/
