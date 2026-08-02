@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { and, count, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { conversations, files, messages } from "@/lib/db/schema";
 
@@ -26,6 +26,10 @@ export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => null)) as {
     question?: string;
     conversationId?: string | null;
+    /** When omitted/empty and scopeAll is true/omitted → all docs. */
+    fileIds?: string[] | null;
+    /** Default true. When false, fileIds must be a non-empty subset. */
+    scopeAll?: boolean;
   } | null;
 
   const question = body?.question?.trim();
@@ -33,23 +37,63 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "question is required" }, { status: 400 });
   }
 
-  const [{ value: completedCount }] = await db
-    .select({ value: count() })
-    .from(files)
-    .where(
-      and(
-        eq(files.userId, userId),
-        eq(files.isFolder, false),
-        eq(files.isTrash, false),
-        eq(files.indexingStatus, "COMPLETED")
-      )
-    );
+  const scopeAll = body?.scopeAll !== false;
+  const requestedIds = Array.from(
+    new Set((body?.fileIds || []).map((id) => id.trim()).filter(Boolean))
+  );
 
-  if (Number(completedCount) === 0) {
-    return NextResponse.json(
-      { error: "No indexed documents yet. Upload a document and wait for indexing." },
-      { status: 409 }
-    );
+  let scopedFileIds: string[] | null = null;
+
+  if (!scopeAll) {
+    if (requestedIds.length === 0) {
+      return NextResponse.json(
+        { error: "Select at least one file, or enable All files." },
+        { status: 400 }
+      );
+    }
+
+    const owned = await db
+      .select({ id: files.id })
+      .from(files)
+      .where(
+        and(
+          eq(files.userId, userId),
+          eq(files.isFolder, false),
+          eq(files.isTrash, false),
+          eq(files.indexingStatus, "COMPLETED"),
+          inArray(files.id, requestedIds)
+        )
+      );
+
+    scopedFileIds = owned.map((f) => f.id);
+    if (scopedFileIds.length === 0) {
+      return NextResponse.json(
+        { error: "None of the selected files are indexed yet." },
+        { status: 409 }
+      );
+    }
+  } else {
+    const [{ value: completedCount }] = await db
+      .select({ value: count() })
+      .from(files)
+      .where(
+        and(
+          eq(files.userId, userId),
+          eq(files.isFolder, false),
+          eq(files.isTrash, false),
+          eq(files.indexingStatus, "COMPLETED")
+        )
+      );
+
+    if (Number(completedCount) === 0) {
+      return NextResponse.json(
+        {
+          error:
+            "No indexed documents yet. Upload a document and wait for indexing.",
+        },
+        { status: 409 }
+      );
+    }
   }
 
   let conversationId = body?.conversationId || null;
@@ -121,10 +165,15 @@ export async function POST(request: NextRequest) {
         controller.enqueue(encoder.encode(sseEncode(event, data)));
       };
 
-      send("meta", { conversationId: conversation.id });
+      send("meta", {
+        conversationId: conversation.id,
+        scopeAll,
+        fileIds: scopedFileIds,
+      });
 
       let assistantText = "";
       let sources: Source[] = [];
+      let answerMode: "documents" | "web" | undefined;
 
       try {
         const upstream = await fetch(`${ragUrl.replace(/\/$/, "")}/chat`, {
@@ -138,6 +187,7 @@ export async function POST(request: NextRequest) {
             user_id: userId,
             question,
             history,
+            file_ids: scopedFileIds ?? [],
           }),
         });
 
@@ -176,19 +226,26 @@ export async function POST(request: NextRequest) {
                 text?: string;
                 sources?: Source[];
                 message?: string;
+                mode?: "documents" | "web";
+                relevance?: unknown;
               };
 
-              if (eventName === "meta" && parsed.sources) {
-                sources = parsed.sources;
+              if (eventName === "meta") {
+                if (parsed.sources) sources = parsed.sources;
+                if (parsed.mode) answerMode = parsed.mode;
                 send("meta", {
                   conversationId: conversation.id,
                   sources,
+                  mode: parsed.mode,
+                  relevance: parsed.relevance,
+                  message: parsed.message,
                 });
               } else if (eventName === "token" && parsed.text) {
                 assistantText += parsed.text;
                 send("token", { text: parsed.text });
               } else if (eventName === "done") {
                 if (parsed.sources) sources = parsed.sources;
+                if (parsed.mode) answerMode = parsed.mode;
               } else if (eventName === "error") {
                 throw new Error(parsed.message || "RAG error");
               }
@@ -219,6 +276,7 @@ export async function POST(request: NextRequest) {
         send("done", {
           conversationId: conversation.id,
           sources,
+          mode: answerMode,
         });
       } catch (error) {
         const message =

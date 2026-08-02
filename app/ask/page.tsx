@@ -14,8 +14,11 @@ import { AnimatePresence, motion } from "framer-motion"
 import {
   ArrowLeft,
   ArrowUp,
+  Check,
+  ChevronDown,
   ExternalLink,
   FileText,
+  Folder,
   FolderOpen,
   Loader2,
   Menu,
@@ -46,6 +49,8 @@ type ChatMessage = {
   role: "user" | "assistant"
   content: string
   sources?: Source[] | null
+  mode?: "documents" | "web" | null
+  statusNote?: string | null
 }
 
 type Conversation = {
@@ -53,6 +58,22 @@ type Conversation = {
   title: string | null
   updatedAt: string
 }
+
+type IndexableFile = {
+  id: string
+  name: string
+  parentId: string | null
+  type: string
+  chunkCount: number | null
+}
+
+type LibraryFolder = {
+  id: string
+  name: string
+  parentId: string | null
+}
+
+const ROOT_PARENT = "00000000-0000-0000-0000-000000000000"
 
 function uniqueSources(messages: ChatMessage[]): Source[] {
   const map = new Map<string, Source>()
@@ -294,6 +315,226 @@ function SourcesPanel({
   )
 }
 
+function ScopePicker({
+  scopeAll,
+  onScopeAllChange,
+  files,
+  folders,
+  selectedIds,
+  onSelectedIdsChange,
+  isLoading,
+}: {
+  scopeAll: boolean
+  onScopeAllChange: (value: boolean) => void
+  files: IndexableFile[]
+  folders: LibraryFolder[]
+  selectedIds: string[]
+  onSelectedIdsChange: (ids: string[]) => void
+  isLoading: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState("")
+
+  const folderNameById = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const f of folders) map.set(f.id, f.name)
+    return map
+  }, [folders])
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return files
+    return files.filter((f) => f.name.toLowerCase().includes(q))
+  }, [files, query])
+
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds])
+
+  const toggleFile = (id: string) => {
+    if (selectedSet.has(id)) {
+      onSelectedIdsChange(selectedIds.filter((x) => x !== id))
+    } else {
+      onSelectedIdsChange([...selectedIds, id])
+    }
+  }
+
+  const selectFolder = (folderId: string) => {
+    const inFolder = files
+      .filter((f) => (f.parentId || ROOT_PARENT) === folderId)
+      .map((f) => f.id)
+    if (inFolder.length === 0) return
+    const next = new Set(selectedIds)
+    const allSelected = inFolder.every((id) => next.has(id))
+    if (allSelected) {
+      inFolder.forEach((id) => next.delete(id))
+    } else {
+      inFolder.forEach((id) => next.add(id))
+    }
+    onSelectedIdsChange(Array.from(next))
+  }
+
+  const scopeLabel = scopeAll
+    ? "All indexed files"
+    : selectedIds.length === 0
+      ? "No files selected"
+      : selectedIds.length === 1
+        ? files.find((f) => f.id === selectedIds[0])?.name || "1 file"
+        : `${selectedIds.length} files selected`
+
+  return (
+    <div className="mb-2 space-y-2">
+      <label className="flex cursor-pointer items-center gap-2.5 rounded-2xl border border-border/70 bg-background/80 px-3 py-2.5 transition-colors hover:bg-muted/30">
+        <input
+          type="checkbox"
+          checked={scopeAll}
+          onChange={(e) => {
+            onScopeAllChange(e.target.checked)
+            if (e.target.checked) setOpen(false)
+          }}
+          className="h-4 w-4 rounded border-border accent-foreground"
+        />
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-medium">All files</span>
+          <span className="block text-[11px] text-muted-foreground">
+            Search your entire indexed library
+          </span>
+        </span>
+      </label>
+
+      {!scopeAll && (
+        <div className="overflow-hidden rounded-2xl border border-border/70 bg-background/80">
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            className="flex w-full items-center gap-2 px-3 py-2.5 text-left"
+          >
+            <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <span className="min-w-0 flex-1 truncate text-sm">{scopeLabel}</span>
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+                open && "rotate-180"
+              )}
+            />
+          </button>
+
+          {open && (
+            <div className="border-t border-border/60 p-2">
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search indexed files…"
+                className="mb-2 w-full rounded-xl border border-border/70 bg-muted/30 px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus:border-border"
+              />
+
+              {folders.length > 0 && (
+                <div className="mb-2 flex flex-wrap gap-1.5">
+                  {folders.map((folder) => {
+                    const childIds = files
+                      .filter((f) => (f.parentId || ROOT_PARENT) === folder.id)
+                      .map((f) => f.id)
+                    if (childIds.length === 0) return null
+                    const allOn = childIds.every((id) => selectedSet.has(id))
+                    return (
+                      <button
+                        key={folder.id}
+                        type="button"
+                        onClick={() => selectFolder(folder.id)}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] transition-colors",
+                          allOn
+                            ? "border-foreground/20 bg-foreground text-background"
+                            : "border-border/70 text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        <Folder className="h-3 w-3" />
+                        {folder.name}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              <div className="max-h-44 space-y-0.5 overflow-y-auto scrollbar-hide">
+                {isLoading ? (
+                  <div className="flex items-center gap-2 px-2 py-3 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading files…
+                  </div>
+                ) : filtered.length === 0 ? (
+                  <p className="px-2 py-3 text-sm text-muted-foreground">
+                    No indexed files found. Upload docs and wait for indexing.
+                  </p>
+                ) : (
+                  filtered.map((file) => {
+                    const checked = selectedSet.has(file.id)
+                    const parentLabel =
+                      file.parentId &&
+                      file.parentId !== ROOT_PARENT &&
+                      folderNameById.get(file.parentId)
+                    return (
+                      <button
+                        key={file.id}
+                        type="button"
+                        onClick={() => toggleFile(file.id)}
+                        className={cn(
+                          "flex w-full items-center gap-2.5 rounded-xl px-2 py-2 text-left transition-colors",
+                          checked ? "bg-muted/70" : "hover:bg-muted/40"
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
+                            checked
+                              ? "border-foreground bg-foreground text-background"
+                              : "border-border"
+                          )}
+                        >
+                          {checked && <Check className="h-3 w-3" />}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm">{file.name}</span>
+                          {parentLabel && (
+                            <span className="block truncate text-[10px] text-muted-foreground">
+                              in {parentLabel}
+                            </span>
+                          )}
+                        </span>
+                      </button>
+                    )
+                  })
+                )}
+              </div>
+
+              {files.length > 0 && (
+                <div className="mt-2 flex gap-2 border-t border-border/50 pt-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 flex-1 rounded-xl text-xs"
+                    onClick={() => onSelectedIdsChange(files.map((f) => f.id))}
+                  >
+                    Select all
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 flex-1 rounded-xl text-xs"
+                    onClick={() => onSelectedIdsChange([])}
+                  >
+                    Clear
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function MessageBubble({
   message,
   isStreaming,
@@ -318,14 +559,30 @@ function MessageBubble({
         )}
       >
         {!isUser && (
-          <div className="mb-2 flex items-center gap-2 px-1">
+          <div className="mb-2 flex flex-wrap items-center gap-2 px-1">
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-foreground text-background">
               <Sparkles className="h-3 w-3" />
             </span>
             <span className="text-xs font-medium text-muted-foreground">
               Droply
             </span>
+            {message.mode === "web" && (
+              <span className="rounded-full border border-border/70 bg-muted/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                Web search
+              </span>
+            )}
+            {message.mode === "documents" && message.sources && message.sources.length > 0 && (
+              <span className="rounded-full border border-border/70 bg-muted/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                Documents
+              </span>
+            )}
           </div>
+        )}
+
+        {message.statusNote && !isUser && !message.content && (
+          <p className="mb-2 px-1 text-xs text-muted-foreground">
+            {message.statusNote}
+          </p>
         )}
 
         <div
@@ -399,6 +656,11 @@ export default function AskPage() {
   const [historyOpen, setHistoryOpen] = useState(false)
   const [sourcesOpen, setSourcesOpen] = useState(false)
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null)
+  const [scopeAll, setScopeAll] = useState(true)
+  const [selectedFileIds, setSelectedFileIds] = useState<string[]>([])
+  const [libraryFiles, setLibraryFiles] = useState<IndexableFile[]>([])
+  const [libraryFolders, setLibraryFolders] = useState<LibraryFolder[]>([])
+  const [isLoadingFiles, setIsLoadingFiles] = useState(true)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -423,6 +685,26 @@ export default function AskPage() {
       setError(err instanceof Error ? err.message : "Failed to load conversations")
     } finally {
       setIsLoadingList(false)
+    }
+  }, [])
+
+  const loadLibraryFiles = useCallback(async () => {
+    setIsLoadingFiles(true)
+    try {
+      const res = await fetch("/api/rag/files")
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Failed to load files")
+      setLibraryFiles(data.files || [])
+      setLibraryFolders(data.folders || [])
+      setSelectedFileIds((prev) =>
+        prev.filter((id: string) =>
+          (data.files || []).some((f: IndexableFile) => f.id === id)
+        )
+      )
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setIsLoadingFiles(false)
     }
   }, [])
 
@@ -454,7 +736,8 @@ export default function AskPage() {
 
   useEffect(() => {
     void loadConversations()
-  }, [loadConversations])
+    void loadLibraryFiles()
+  }, [loadConversations, loadLibraryFiles])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -485,10 +768,19 @@ export default function AskPage() {
       .catch((err) => setError(String(err.message || err)))
   }
 
+  const canSend =
+    !!question.trim() &&
+    !isSending &&
+    (scopeAll || selectedFileIds.length > 0)
+
   const onSubmit = async (e?: FormEvent) => {
     e?.preventDefault()
     const q = question.trim()
     if (!q || isSending) return
+    if (!scopeAll && selectedFileIds.length === 0) {
+      setError("Select at least one file, or enable All files.")
+      return
+    }
 
     setIsSending(true)
     setError(null)
@@ -516,6 +808,8 @@ export default function AskPage() {
         body: JSON.stringify({
           question: q,
           conversationId,
+          scopeAll,
+          fileIds: scopeAll ? [] : selectedFileIds,
         }),
       })
 
@@ -552,15 +846,23 @@ export default function AskPage() {
               text?: string
               sources?: Source[]
               message?: string
+              mode?: "documents" | "web"
             }
 
             if (parsed.conversationId) {
               setConversationId(parsed.conversationId)
             }
-            if (eventName === "meta" && parsed.sources) {
+            if (eventName === "meta") {
               setMessages((prev) =>
                 prev.map((m) =>
-                  m.id === assistantId ? { ...m, sources: parsed.sources } : m
+                  m.id === assistantId
+                    ? {
+                        ...m,
+                        sources: parsed.sources ?? m.sources,
+                        mode: parsed.mode ?? m.mode,
+                        statusNote: parsed.message ?? m.statusNote,
+                      }
+                    : m
                 )
               )
             }
@@ -568,15 +870,26 @@ export default function AskPage() {
               setMessages((prev) =>
                 prev.map((m) =>
                   m.id === assistantId
-                    ? { ...m, content: m.content + parsed.text }
+                    ? {
+                        ...m,
+                        content: m.content + parsed.text,
+                        statusNote: null,
+                      }
                     : m
                 )
               )
             }
-            if (eventName === "done" && parsed.sources) {
+            if (eventName === "done") {
               setMessages((prev) =>
                 prev.map((m) =>
-                  m.id === assistantId ? { ...m, sources: parsed.sources } : m
+                  m.id === assistantId
+                    ? {
+                        ...m,
+                        sources: parsed.sources ?? m.sources,
+                        mode: parsed.mode ?? m.mode,
+                        statusNote: null,
+                      }
+                    : m
                 )
               )
             }
@@ -767,6 +1080,15 @@ export default function AskPage() {
                 {error && (
                   <p className="mb-2 px-1 text-sm text-destructive">{error}</p>
                 )}
+                <ScopePicker
+                  scopeAll={scopeAll}
+                  onScopeAllChange={setScopeAll}
+                  files={libraryFiles}
+                  folders={libraryFolders}
+                  selectedIds={selectedFileIds}
+                  onSelectedIdsChange={setSelectedFileIds}
+                  isLoading={isLoadingFiles}
+                />
                 <form
                   onSubmit={onSubmit}
                   className="relative rounded-[1.75rem] border border-border/70 bg-background/90 p-2 shadow-[0_10px_40px_-18px_rgba(0,0,0,0.35)] backdrop-blur-xl ring-1 ring-black/5 dark:ring-white/5"
@@ -776,7 +1098,13 @@ export default function AskPage() {
                     value={question}
                     onChange={(e) => onQuestionChange(e.target.value)}
                     onKeyDown={onKeyDown}
-                    placeholder="Ask anything about your documents…"
+                    placeholder={
+                      scopeAll
+                        ? "Ask anything about your documents…"
+                        : selectedFileIds.length
+                          ? `Ask about ${selectedFileIds.length} selected file${selectedFileIds.length === 1 ? "" : "s"}…`
+                          : "Select files above, then ask…"
+                    }
                     disabled={isSending}
                     rows={1}
                     className="max-h-36 min-h-[48px] w-full resize-none bg-transparent px-3 py-3 pr-14 text-sm leading-relaxed outline-none placeholder:text-muted-foreground disabled:opacity-60"
@@ -784,7 +1112,7 @@ export default function AskPage() {
                   <Button
                     type="submit"
                     size="icon"
-                    disabled={isSending || !question.trim()}
+                    disabled={!canSend}
                     className="absolute bottom-3 right-3 h-10 w-10 rounded-full shadow-sm"
                     aria-label="Send message"
                   >
@@ -796,7 +1124,9 @@ export default function AskPage() {
                   </Button>
                 </form>
                 <p className="mt-2 px-1 text-center text-[11px] text-muted-foreground">
-                  Enter to send · Shift+Enter for a new line
+                  {scopeAll
+                    ? "Searching all indexed files · Enter to send"
+                    : `${selectedFileIds.length} file${selectedFileIds.length === 1 ? "" : "s"} in scope · Enter to send`}
                 </p>
               </div>
             </div>
