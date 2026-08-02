@@ -53,6 +53,8 @@ export async function POST(request: NextRequest) {
             isFolder: true,
             isStarred: false,
             isTrash: false,
+            indexingStatus: "INVALID" as const,
+            indexAttempts: 0,
           };
           const [newFolder] = await db.insert(files).values(folderData).returning();
           return NextResponse.json({

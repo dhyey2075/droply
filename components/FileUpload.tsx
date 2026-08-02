@@ -27,6 +27,11 @@ interface UploadedFile {
     isFolder: boolean
     isStarred: boolean
     isTrash: boolean
+    indexingStatus?: "INVALID" | "PENDING" | "INPROGRESS" | "COMPLETED" | "FAILED"
+    indexAttempts?: number
+    indexError?: string | null
+    indexedAt?: string | null
+    chunkCount?: number | null
     createdAt: string
     updatedAt: string
 }
@@ -170,7 +175,7 @@ const UploadExample: React.FC<UploadExampleProps> = ({ fileInputRef, parentId, o
                 ref={fileInputRef}
                 className="hidden"
                 onChange={handleUpload}
-                accept="image/*,application/pdf"
+                accept="image/*,application/pdf,.pdf,.docx,.doc,.txt,.md,.csv,.rtf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/csv,application/rtf"
             />
             <Button
                 variant="default"

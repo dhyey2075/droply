@@ -3,8 +3,9 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useUser, UserButton } from '@clerk/nextjs'
 import { useTheme } from 'next-themes'
 import UploadExample from '@/components/FileUpload'
+import { IndexingStatusBadge } from '@/components/IndexingStatusBadge'
 import prettyBytes from 'pretty-bytes'
-import { ArrowLeft, ExternalLink, File, Folder, FolderPlus, Share2, Trash2Icon, Grid2X2, ListFilter, Loader2, Pencil, FolderOpen, Sun, Moon, Monitor, Cloud } from 'lucide-react'
+import { ArrowLeft, ExternalLink, File, Folder, FolderPlus, Share2, Trash2Icon, Grid2X2, ListFilter, Loader2, Pencil, FolderOpen, Sun, Moon, Monitor, Cloud, MessageSquare } from 'lucide-react'
 import { getClassWithColor } from 'file-icons-js'
 import 'file-icons-js/css/style.css'
 import { Bounce, ToastContainer, toast } from 'react-toastify'
@@ -38,6 +39,10 @@ export interface File {
   isFolder: boolean
   isStarred: boolean
   isTrash: boolean
+  indexingStatus?: 'INVALID' | 'PENDING' | 'INPROGRESS' | 'COMPLETED' | 'FAILED'
+  indexError?: string | null
+  chunkCount?: number | null
+  indexedAt?: string | null
   createdAt: string
   updatedAt: string
   gdriveId?: string
@@ -214,6 +219,48 @@ const Page: React.FC = () => {
     checkGDriveStatus()
     checkOneDriveStatus()
   }, [fetchUserMedia, checkGDriveStatus, checkOneDriveStatus])
+
+  // Server-push indexing updates (SSE) — no client polling
+  useEffect(() => {
+    if (!isSignedIn) return
+
+    const source = new EventSource('/api/files/indexing-stream')
+
+    source.addEventListener('indexing', (event) => {
+      try {
+        const payload = JSON.parse((event as MessageEvent).data) as {
+          fileId: string
+          indexingStatus: File['indexingStatus']
+          indexError?: string | null
+          chunkCount?: number | null
+          indexedAt?: string | null
+        }
+        setMedia((prev) =>
+          prev.map((file) =>
+            file.id === payload.fileId
+              ? {
+                  ...file,
+                  indexingStatus: payload.indexingStatus,
+                  indexError: payload.indexError ?? null,
+                  chunkCount: payload.chunkCount ?? file.chunkCount,
+                  indexedAt: payload.indexedAt ?? file.indexedAt,
+                }
+              : file
+          )
+        )
+      } catch (error) {
+        console.error('Failed to parse indexing event', error)
+      }
+    })
+
+    source.onerror = () => {
+      // Browser will auto-reconnect EventSource
+    }
+
+    return () => {
+      source.close()
+    }
+  }, [isSignedIn])
 
   useEffect(() => {
     // Check for OAuth callback success
@@ -400,6 +447,17 @@ const Page: React.FC = () => {
               >
                 {viewMode === 'grid' ? <ListFilter className="h-4 w-4 sm:h-5 sm:w-5" /> : <Grid2X2 className="h-4 w-4 sm:h-5 sm:w-5" />}
               </Button>
+              <a href="/ask">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 sm:h-10 rounded-lg gap-1.5 hover:scale-105 transition-all duration-200 touch-manipulation"
+                  title="Ask your documents"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  <span className="hidden sm:inline">Ask</span>
+                </Button>
+              </a>
               {mounted && (
                 <Button
                   variant="ghost"
@@ -846,11 +904,20 @@ const Page: React.FC = () => {
                     </div>
                     
                     {!item.isFolder && (
-                      <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground mt-1">
+                      <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground mt-1 flex-wrap">
                         <span>{prettyBytes(item.size)}</span>
                         <span className="hidden sm:inline">·</span>
                         <span className="hidden sm:inline">{dateFormat(item.createdAt, "mmm d, yyyy")}</span>
                         <span className="sm:hidden">{dateFormat(item.createdAt, "mm/dd/yy")}</span>
+                        {activeSource === 'droply' && (
+                          <>
+                            <span className="hidden sm:inline">·</span>
+                            <IndexingStatusBadge
+                              status={item.indexingStatus}
+                              error={item.indexError}
+                            />
+                          </>
+                        )}
                       </div>
                     )}
                   </div>

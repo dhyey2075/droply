@@ -1,6 +1,8 @@
 import { db } from "@/lib/db";
 import { files } from "@/lib/db/schema";
 import { getUserFileLimit, isUnlimitedLimit } from "@/lib/admin";
+import { isIndexableDocument } from "@/lib/rag/isIndexableDocument";
+import { inngest } from "@/lib/inngest/client";
 import { auth } from "@clerk/nextjs/server";
 import { and, eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
@@ -44,11 +46,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const name = imagekit.name || "Untitled";
+    const type = imagekit.fileType || "image";
+    const indexable = isIndexableDocument({ name, type, isFolder: false });
+    const indexingStatus = indexable ? "PENDING" : "INVALID";
+
     const fileData = {
-      name: imagekit.name || "Untitled",
-      path: imagekit.filePath || `/droply/${userId}/${imagekit.name}`,
+      name,
+      path: imagekit.filePath || `/droply/${userId}/${name}`,
       size: imagekit.size || 0,
-      type: imagekit.fileType || "image",
+      type,
       fileUrl: imagekit.url,
       fileId: imagekit.fileId || "",
       thumbnailUrl: imagekit.thumbnailUrl || "",
@@ -57,9 +64,41 @@ export async function POST(request: NextRequest) {
       isFolder: false,
       isStarred: false,
       isTrash: false,
-    };
+      indexingStatus,
+      indexAttempts: 0,
+    } as const;
 
     const [newfile] = await db.insert(files).values(fileData).returning();
+
+    if (indexingStatus === "PENDING") {
+      try {
+        await inngest.send({
+          name: "document/index",
+          data: {
+            fileId: newfile.id,
+            userId,
+          },
+        });
+      } catch (enqueueError) {
+        console.error("Failed to enqueue document index:", enqueueError);
+        const message =
+          enqueueError instanceof Error
+            ? enqueueError.message
+            : "Failed to enqueue indexing job";
+
+        const [failedFile] = await db
+          .update(files)
+          .set({
+            indexingStatus: "FAILED",
+            indexError: message,
+            updatedAt: new Date(),
+          })
+          .where(eq(files.id, newfile.id))
+          .returning();
+
+        return NextResponse.json({ file: failedFile }, { status: 200 });
+      }
+    }
 
     return NextResponse.json({ file: newfile }, { status: 200 });
   } catch (error) {
