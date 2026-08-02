@@ -56,7 +56,13 @@ Health: [http://localhost:8001/health](http://localhost:8001/health)
 RAG_INGEST_URL=http://localhost:8001
 RAG_INTERNAL_KEY=dev-rag-internal-key-change-me
 INNGEST_DEV=1
+
+# Optional: cap parallel RAG ingests (defaults: 3 global, 2 per user)
+# INDEX_CONCURRENCY=3
+# INDEX_CONCURRENCY_PER_USER=2
 ```
+
+Indexing is queued by Inngest. If 50 files upload at once, all jobs are enqueued immediately, but only `INDEX_CONCURRENCY` run against RAG at a time; the rest stay `PENDING` until a slot frees.
 
 ## Quick reference
 

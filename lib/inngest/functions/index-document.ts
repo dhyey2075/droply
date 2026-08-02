@@ -10,6 +10,18 @@ import {
 
 const MAX_INDEX_ATTEMPTS = 3;
 
+/** Max simultaneous RAG ingests app-wide (protects Gemini + pgvector). */
+const INDEX_CONCURRENCY = Math.max(
+  1,
+  Number.parseInt(process.env.INDEX_CONCURRENCY ?? "3", 10) || 3
+);
+
+/** Max simultaneous ingests per user so one bulk upload can't starve others. */
+const INDEX_CONCURRENCY_PER_USER = Math.max(
+  1,
+  Number.parseInt(process.env.INDEX_CONCURRENCY_PER_USER ?? "2", 10) || 2
+);
+
 function emitStatus(payload: {
   fileId: string;
   userId: string;
@@ -32,6 +44,12 @@ export const indexDocument = inngest.createFunction(
   {
     id: "index-document",
     retries: 2,
+    // Queue overflow: 50 uploads enqueue immediately, but only N run at once.
+    // Excess stays PENDING until a concurrency slot frees up.
+    concurrency: [
+      { limit: INDEX_CONCURRENCY },
+      { limit: INDEX_CONCURRENCY_PER_USER, key: "event.data.userId" },
+    ],
     triggers: [{ event: "document/index" }],
   },
   async ({ event, step, attempt }) => {
