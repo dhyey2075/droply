@@ -1,36 +1,83 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Droply
 
-## Getting Started
+File library app with document Q&A (RAG). Local development needs **three** processes running together.
 
-First, run the development server:
+## Prerequisites
+
+- Node.js 20+
+- Python 3.12+ (for the RAG service)
+- Env vars configured in `.env` (see `RAG_INGEST_URL`, `RAG_INTERNAL_KEY`, `INNGEST_DEV`, etc.)
+
+## Run all 3 servers
+
+Open **three terminals** from the repo root (`droply`).
+
+### 1. Next.js app (port 3000)
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+App: [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 2. Inngest Dev Server (background jobs / indexing)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npx inngest-cli@latest dev -u http://localhost:3000/api/inngest
+```
+
+Dashboard: [http://localhost:8288](http://localhost:8288)
+
+### 3. Droply RAG service (port 8001)
+
+The RAG API lives in the sibling `droply-rag` folder (or `droply-rag/` if nested in this repo).
+
+```bash
+cd ../droply-rag
+python -m venv .venv
+
+# Windows
+.venv\Scripts\activate
+
+# macOS / Linux
+source .venv/bin/activate
+
+pip install -r requirements.txt
+cp .env.example .env   # first time only — fill keys
+uvicorn main:app --reload --port 8001
+```
+
+Health: [http://localhost:8001/health](http://localhost:8001/health)
+
+`RAG_INGEST_URL` in Droply’s `.env` should point at this service, e.g.:
+
+```env
+RAG_INGEST_URL=http://localhost:8001
+RAG_INTERNAL_KEY=dev-rag-internal-key-change-me
+INNGEST_DEV=1
+```
+
+## Quick reference
+
+| Service   | Command                                                              | URL                          |
+| --------- | -------------------------------------------------------------------- | ---------------------------- |
+| Next.js   | `pnpm dev`                                                           | http://localhost:3000        |
+| Inngest   | `npx inngest-cli@latest dev -u http://localhost:3000/api/inngest`    | http://localhost:8288        |
+| RAG       | `uvicorn main:app --reload --port 8001` (from `droply-rag`)          | http://localhost:8001        |
+
+## Useful scripts
+
+```bash
+pnpm db:push                 # push Drizzle schema
+pnpm db:studio               # open Drizzle Studio
+pnpm db:enable-pgvector      # enable pgvector extension
+pnpm lint
+pnpm build
+```
 
 ## Learn More
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Inngest Dev Server](https://www.inngest.com/docs/local-development)
+- [droply-rag README](../droply-rag/README.md) (sibling folder)
