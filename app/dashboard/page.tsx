@@ -403,39 +403,6 @@ const Page: React.FC = () => {
           <div className="flex items-center justify-between gap-2 sm:gap-4">
             <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
               <h1 className="text-xl sm:text-2xl font-bold truncate">Droply</h1>
-              
-              {/* Source Tabs */}
-              <div className="flex items-center gap-1 bg-muted rounded-lg p-1 ml-2 sm:ml-4">
-                <button
-                  onClick={() => setActiveSource('droply')}
-                  className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-sm font-medium transition-all duration-200 touch-manipulation ${
-                    activeSource === 'droply'
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  Droply
-                </button>
-                <button
-                  onClick={() => {
-                    if (!isGDriveConnected) {
-                      handleGDriveConnect()
-                    } else {
-                      setActiveSource('gdrive')
-                    }
-                  }}
-                  className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-sm font-medium transition-all duration-200 touch-manipulation flex items-center gap-1.5 ${
-                    activeSource === 'gdrive'
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <img src="https://static.vecteezy.com/system/resources/previews/022/484/494/non_2x/google-drive-icon-logo-symbol-free-png.png" alt="Google Drive" className="h-3.5 w-3.5 sm:h-4 sm:w-4" style={{ width: '16px', height: '16px' }} />
-                  {!isGDriveConnected && (
-                    <span className="ml-1 text-xs text-muted-foreground">(Connect)</span>
-                  )}
-                </button>
-              </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
               <Button

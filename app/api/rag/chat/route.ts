@@ -266,6 +266,7 @@ export async function POST(request: NextRequest) {
           role: "assistant",
           content: assistantText,
           sources: sources.length ? sources : null,
+          answerMode: answerMode ?? "documents",
         });
 
         await db

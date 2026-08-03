@@ -149,6 +149,8 @@ export const messages = pgTable(
         snippet: string;
       }>
     >(),
+    /** RAG answer path: documents (pgvector) or web (CRAG fallback) */
+    answerMode: text("answer_mode").$type<"documents" | "web">(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [

@@ -723,11 +723,19 @@ export default function AskPage() {
             role: "user" | "assistant"
             content: string
             sources?: Source[]
+            answerMode?: "documents" | "web" | null
           }) => ({
             id: m.id,
             role: m.role,
             content: m.content,
             sources: m.sources,
+            mode:
+              m.answerMode ||
+              (m.sources?.some((s) => String(s.fileId).startsWith("web-"))
+                ? "web"
+                : m.sources?.length
+                  ? "documents"
+                  : null),
           })
         )
     )
