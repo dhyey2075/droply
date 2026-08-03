@@ -63,7 +63,7 @@ const Page: React.FC = () => {
   const [newFileName, setNewFileName] = useState<string>('')
   const [isRenaming, setIsRenaming] = useState<boolean>(false)
   const [isCreatingFolder, setIsCreatingFolder] = useState<boolean>(false)
-  const [activeSource, setActiveSource] = useState<'droply' | 'gdrive' | 'onedrive'>('droply')
+  const [activeSource] = useState<'droply' | 'gdrive' | 'onedrive'>('droply')
   const [isGDriveConnected, setIsGDriveConnected] = useState<boolean>(false)
   const [gDriveFiles, setGDriveFiles] = useState<File[]>([])
   const [gDriveFolderHierarchy, setGDriveFolderHierarchy] = useState<[string, string][]>([["root", "Google Drive"]])
