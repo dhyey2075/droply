@@ -579,12 +579,6 @@ function MessageBubble({
           </div>
         )}
 
-        {message.statusNote && !isUser && !message.content && (
-          <p className="mb-2 px-1 text-xs text-muted-foreground">
-            {message.statusNote}
-          </p>
-        )}
-
         <div
           className={cn(
             "rounded-[1.35rem] px-4 py-3 text-sm leading-relaxed",
@@ -593,7 +587,20 @@ function MessageBubble({
               : "rounded-bl-md bg-muted/70 text-foreground ring-1 ring-border/40"
           )}
         >
-          {showTyping ? (
+          {showTyping && message.statusNote ? (
+            <p
+              className="flex items-start gap-2 text-muted-foreground"
+              aria-live="polite"
+              aria-label={message.statusNote}
+            >
+              <span className="mt-1.5 flex shrink-0 gap-0.5" aria-hidden>
+                <span className="h-1 w-1 animate-pulse rounded-full bg-muted-foreground/70" />
+                <span className="h-1 w-1 animate-pulse rounded-full bg-muted-foreground/50 [animation-delay:150ms]" />
+                <span className="h-1 w-1 animate-pulse rounded-full bg-muted-foreground/40 [animation-delay:300ms]" />
+              </span>
+              <span className="min-w-0">{message.statusNote}</span>
+            </p>
+          ) : showTyping ? (
             <div className="flex items-center gap-1.5 py-1" aria-label="Thinking">
               <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/70 [animation-delay:-0.2s]" />
               <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/70 [animation-delay:-0.1s]" />
@@ -859,6 +866,15 @@ export default function AskPage() {
 
             if (parsed.conversationId) {
               setConversationId(parsed.conversationId)
+            }
+            if (eventName === "status" && parsed.message) {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantId
+                    ? { ...m, statusNote: parsed.message }
+                    : m
+                )
+              )
             }
             if (eventName === "meta") {
               setMessages((prev) =>

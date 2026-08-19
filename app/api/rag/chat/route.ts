@@ -171,6 +171,12 @@ export async function POST(request: NextRequest) {
         fileIds: scopedFileIds,
       });
 
+      send("status", {
+        conversationId: conversation.id,
+        step: "connect",
+        message: "Looking through your library…",
+      });
+
       let assistantText = "";
       let sources: Source[] = [];
       let answerMode: "documents" | "web" | undefined;
@@ -228,9 +234,16 @@ export async function POST(request: NextRequest) {
                 message?: string;
                 mode?: "documents" | "web";
                 relevance?: unknown;
+                step?: string;
               };
 
-              if (eventName === "meta") {
+              if (eventName === "status" && parsed.message) {
+                send("status", {
+                  conversationId: conversation.id,
+                  message: parsed.message,
+                  step: parsed.step,
+                });
+              } else if (eventName === "meta") {
                 if (parsed.sources) sources = parsed.sources;
                 if (parsed.mode) answerMode = parsed.mode;
                 send("meta", {
