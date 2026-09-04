@@ -1,10 +1,18 @@
-{$DOMAIN:localhost} {
+{
+	auto_https off
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
+http://{$DOMAIN:localhost} {
 	encode gzip zstd
 
 	reverse_proxy web:3000 {
 		flush_interval -1
 		header_up Host {host}
-		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-For {http.request.header.X-Forwarded-For}
 		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-Host {host}
 	}
 }

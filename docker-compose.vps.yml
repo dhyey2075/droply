@@ -1,6 +1,11 @@
-# VPS overlay: pull images from Docker Hub. Never compile on the server.
+# VPS overlay: pull Hub images, no compile, no host 80/443 (Traefik owns those).
 #   docker compose -f docker-compose.yml -f docker-compose.vps.yml pull
 #   docker compose -f docker-compose.yml -f docker-compose.vps.yml up -d
+networks:
+  proxy:
+    external: true
+    name: proxy
+
 services:
   web:
     build: !reset null
@@ -14,3 +19,19 @@ services:
     build: !reset null
     image: ${DOCKERHUB_USER}/droply-rag:${IMAGE_TAG:-latest}
     pull_policy: always
+  caddy:
+    ports: !reset []
+    expose:
+      - "80"
+    networks:
+      - default
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy
+      - traefik.http.routers.droply.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.droply.entrypoints=websecure
+      - traefik.http.routers.droply.tls=true
+      - traefik.http.routers.droply.tls.certresolver=le
+      - traefik.http.services.droply.loadbalancer.server.port=80
+      - traefik.http.services.droply.loadbalancer.responseforwarding.flushinterval=1ms
