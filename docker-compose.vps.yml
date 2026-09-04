@@ -1,0 +1,16 @@
+# VPS overlay: pull images from Docker Hub. Never compile on the server.
+#   docker compose -f docker-compose.yml -f docker-compose.vps.yml pull
+#   docker compose -f docker-compose.yml -f docker-compose.vps.yml up -d
+services:
+  web:
+    build: !reset null
+    image: ${DOCKERHUB_USER}/droply-web:${IMAGE_TAG:-latest}
+    pull_policy: always
+  rag:
+    build: !reset null
+    image: ${DOCKERHUB_USER}/droply-rag:${IMAGE_TAG:-latest}
+    pull_policy: always
+  worker:
+    build: !reset null
+    image: ${DOCKERHUB_USER}/droply-rag:${IMAGE_TAG:-latest}
+    pull_policy: always

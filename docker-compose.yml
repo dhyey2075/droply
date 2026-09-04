@@ -14,6 +14,8 @@ services:
       retries: 10
 
   web:
+    image: ${DOCKERHUB_USER}/droply-web:${IMAGE_TAG:-latest}
+    platform: linux/amd64
     build:
       context: .
       dockerfile: Dockerfile
@@ -42,7 +44,8 @@ services:
         condition: service_started
 
   rag:
-    image: droply-rag:local
+    image: ${DOCKERHUB_USER}/droply-rag:${IMAGE_TAG:-latest}
+    platform: linux/amd64
     build:
       context: ../droply-rag
       dockerfile: Dockerfile
@@ -69,7 +72,8 @@ services:
       start_period: 15s
 
   worker:
-    image: droply-rag:local
+    image: ${DOCKERHUB_USER}/droply-rag:${IMAGE_TAG:-latest}
+    platform: linux/amd64
     build:
       context: ../droply-rag
       dockerfile: Dockerfile
