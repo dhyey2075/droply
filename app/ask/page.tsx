@@ -50,7 +50,7 @@ type ChatMessage = {
   role: "user" | "assistant"
   content: string
   sources?: Source[] | null
-  mode?: "documents" | "web" | null
+  mode?: "documents" | "web" | "chat" | null
   statusNote?: string | null
 }
 
@@ -733,7 +733,7 @@ export default function AskPage() {
             role: "user" | "assistant"
             content: string
             sources?: Source[]
-            answerMode?: "documents" | "web" | null
+            answerMode?: "documents" | "web" | "chat" | null
           }) => ({
             id: m.id,
             role: m.role,
@@ -864,7 +864,7 @@ export default function AskPage() {
               text?: string
               sources?: Source[]
               message?: string
-              mode?: "documents" | "web"
+              mode?: "documents" | "web" | "chat"
             }
 
             if (parsed.conversationId) {

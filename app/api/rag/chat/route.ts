@@ -174,12 +174,12 @@ export async function POST(request: NextRequest) {
       send("status", {
         conversationId: conversation.id,
         step: "connect",
-        message: "Looking through your library…",
+        message: "Understanding your question…",
       });
 
       let assistantText = "";
       let sources: Source[] = [];
-      let answerMode: "documents" | "web" | undefined;
+      let answerMode: "documents" | "web" | "chat" | undefined;
 
       try {
         const upstream = await fetch(`${ragUrl.replace(/\/$/, "")}/chat`, {
@@ -232,7 +232,7 @@ export async function POST(request: NextRequest) {
                 text?: string;
                 sources?: Source[];
                 message?: string;
-                mode?: "documents" | "web";
+                mode?: "documents" | "web" | "chat";
                 relevance?: unknown;
                 step?: string;
               };
@@ -279,7 +279,7 @@ export async function POST(request: NextRequest) {
           role: "assistant",
           content: assistantText,
           sources: sources.length ? sources : null,
-          answerMode: answerMode ?? "documents",
+          answerMode: answerMode ?? (sources.length ? "documents" : "chat"),
         });
 
         await db

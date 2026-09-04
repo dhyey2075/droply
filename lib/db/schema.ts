@@ -150,7 +150,7 @@ export const messages = pgTable(
       }>
     >(),
     /** RAG answer path: documents (pgvector) or web (CRAG fallback) */
-    answerMode: text("answer_mode").$type<"documents" | "web">(),
+    answerMode: text("answer_mode").$type<"documents" | "web" | "chat">(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [
