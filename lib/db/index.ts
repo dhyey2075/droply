@@ -3,8 +3,28 @@ import { neon } from "@neondatabase/serverless";
 
 import * as schema from "./schema";
 
-const sql = neon(process.env.DATABASE_URL!)
+function createDb() {
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    throw new Error("DATABASE_URL is not configured");
+  }
+  return drizzle(neon(url), { schema });
+}
 
-export const db = drizzle(sql, { schema });
+let dbInstance: ReturnType<typeof createDb> | undefined;
 
-export { sql }
+function getDb() {
+  if (!dbInstance) {
+    dbInstance = createDb();
+  }
+  return dbInstance;
+}
+
+/** Lazy so `next build` can import API routes without DATABASE_URL. */
+export const db = new Proxy({} as ReturnType<typeof createDb>, {
+  get(_target, prop, receiver) {
+    const client = getDb();
+    const value = Reflect.get(client, prop, receiver);
+    return typeof value === "function" ? value.bind(client) : value;
+  },
+});

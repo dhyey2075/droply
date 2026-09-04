@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { files } from "@/lib/db/schema";
 import { getUserFileLimit, isUnlimitedLimit } from "@/lib/admin";
 import { isIndexableDocument } from "@/lib/rag/isIndexableDocument";
-import { inngest } from "@/lib/inngest/client";
+import { enqueueIndexJob, isDuplicateJobError } from "@/lib/queue/queues";
 import { auth } from "@clerk/nextjs/server";
 import { and, eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
@@ -72,14 +72,14 @@ export async function POST(request: NextRequest) {
 
     if (indexingStatus === "PENDING") {
       try {
-        await inngest.send({
-          name: "document/index",
-          data: {
-            fileId: newfile.id,
-            userId,
-          },
+        await enqueueIndexJob({
+          fileId: newfile.id,
+          userId,
         });
       } catch (enqueueError) {
+        if (isDuplicateJobError(enqueueError)) {
+          return NextResponse.json({ file: newfile }, { status: 200 });
+        }
         console.error("Failed to enqueue document index:", enqueueError);
         const message =
           enqueueError instanceof Error

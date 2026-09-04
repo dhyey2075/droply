@@ -59,7 +59,7 @@ export async function GET() {
   });
 }
 
-/** Optional internal publish (same process also publishes directly from Inngest). */
+/** Internal publish from the indexing worker (separate process). */
 export async function POST(request: Request) {
   const authHeader = request.headers.get("authorization");
   const expected = process.env.RAG_INTERNAL_KEY;

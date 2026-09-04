@@ -1,89 +1,139 @@
 # Droply
 
-File library app with document Q&A (RAG). Local development needs **three** processes running together.
+File library app with document Q&A (RAG).
 
 ## Prerequisites
 
 - Node.js 20+
-- Python 3.12+ (for the RAG service)
-- Env vars configured in `.env` (see `RAG_INGEST_URL`, `RAG_INTERNAL_KEY`, `INNGEST_DEV`, etc.)
+- Python 3.12+ (for the RAG chat API and indexing worker)
+- Redis (Docker Compose in this repo, or any Redis reachable at `REDIS_URL`)
+- Env vars configured in `.env` (see `RAG_INGEST_URL`, `RAG_INTERNAL_KEY`, `REDIS_URL`, etc.)
 
-## Run all 3 servers
+## Docker Compose (Next + RAG + worker + Caddy)
 
-Open **three terminals** from the repo root (`droply`).
-
-### 1. Next.js app (port 3000)
+From `droply`, with `.env` filled in both `droply` and `droply-rag`:
 
 ```bash
-pnpm install
-pnpm dev
+docker compose up --build -d
+```
+
+| Service | Container | Public |
+| --- | --- | --- |
+| Caddy | `caddy` | `:80` / `:443` |
+| Next.js | `web` | internal only |
+| RAG chat | `rag` | internal only |
+| Indexing worker | `worker` | internal only |
+| Redis | `redis` | internal only |
+
+Caddy terminates HTTPS and reverse-proxies to Next. Next talks to RAG at `http://rag:8001`. Redis is not published.
+
+### VPS deploy
+
+1. Point a DNS **A record** at the VPS (`droply.dhyey2075.fun` or whatever you set as `DOMAIN`).
+2. Open **80** and **443** on the firewall. Nothing else needs to be public.
+3. On the VPS, clone `droply` and `droply-rag` as siblings, copy `.env` files.
+4. In `droply/.env` set:
+
+```env
+DOMAIN=droply.dhyey2075.fun
+NEXT_PUBLIC_APP_URL=https://droply.dhyey2075.fun
+```
+
+5. In Clerk, add that HTTPS origin (and sign-in redirect URLs).
+6. Rebuild Next so `NEXT_PUBLIC_*` values are baked in, then start:
+
+```bash
+cd droply
+docker compose up --build -d
+```
+
+Caddy fetches a Let’s Encrypt cert automatically. Logs: `docker compose logs -f caddy web worker rag`.
+
+Stop with `docker compose down`.
+
+## Local processes (without Docker)
+
+Local development needs **four** processes running together.
+
+### 1. Redis (port 6379)
+
+From `droply`:
+
+```bash
+docker compose up redis
+```
+
+### 2. Next.js app (port 3000)
+
+From `droply`:
+
+```bash
+npm install
+npm run dev
 ```
 
 App: [http://localhost:3000](http://localhost:3000)
 
-### 2. Inngest Dev Server (background jobs / indexing)
+### 3. Indexing worker (BullMQ, Python)
+
+This process does download / chunk / embed / upsert. It is **not** the FastAPI server.
+
+From `droply-rag`:
 
 ```bash
-npx inngest-cli@latest dev -u http://localhost:3000/api/inngest
+.\.venv\Scripts\activate
+python -m app.ingest.worker
 ```
 
-Dashboard: [http://localhost:8288](http://localhost:8288)
+Consumes the `indexing` queue and the `indexing-dlq`. Failed jobs retry with exponential backoff + jitter, then move to the DLQ for slower retries.
 
-### 3. Droply RAG service (port 8001)
+### 4. Droply RAG chat API
 
-The RAG API lives in the sibling `droply-rag` folder (or `droply-rag/` if nested in this repo).
+Chat only (`/health`, `/chat`). Do not send ingest traffic here.
+
+From `droply-rag`:
 
 ```bash
-cd ../droply-rag
-python -m venv .venv
-
-# Windows
-.venv\Scripts\activate
-
-# macOS / Linux
-source .venv/bin/activate
-
+.\.venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env   # first time only — fill keys
-uvicorn main:app --reload --port 8001
+uvicorn main:app --reload --port 8081
 ```
 
-Health: [http://localhost:8001/health](http://localhost:8001/health)
+Health: [http://localhost:8081/health](http://localhost:8081/health)
 
-`RAG_INGEST_URL` in Droply’s `.env` should point at this service, e.g.:
+Droply `.env` (chat still uses the RAG URL):
 
 ```env
-RAG_INGEST_URL=http://localhost:8001
+RAG_INGEST_URL=http://localhost:8081
 RAG_INTERNAL_KEY=dev-rag-internal-key-change-me
-INNGEST_DEV=1
-
-# Optional: cap parallel RAG ingests (defaults: 3 global, 2 per user)
-# INDEX_CONCURRENCY=3
-# INDEX_CONCURRENCY_PER_USER=2
+REDIS_URL=redis://127.0.0.1:6379
 ```
 
-Indexing is queued by Inngest. If 50 files upload at once, all jobs are enqueued immediately, but only `INDEX_CONCURRENCY` run against RAG at a time; the rest stay `PENDING` until a slot frees.
+droply-rag `.env` also needs `REDIS_URL` and `APP_URL=http://localhost:3000` so the worker can publish indexing SSE.
+
+If 50 files upload at once, all jobs are enqueued immediately, but only `INDEX_CONCURRENCY` run at a time; the rest stay `PENDING` until a slot frees.
 
 ## Quick reference
 
-| Service   | Command                                                              | URL                          |
-| --------- | -------------------------------------------------------------------- | ---------------------------- |
-| Next.js   | `pnpm dev`                                                           | http://localhost:3000        |
-| Inngest   | `npx inngest-cli@latest dev -u http://localhost:3000/api/inngest`    | http://localhost:8288        |
-| RAG       | `uvicorn main:app --reload --port 8001` (from `droply-rag`)          | http://localhost:8001        |
+| Service          | Command                                      | URL                    |
+| ---------------- | -------------------------------------------- | ---------------------- |
+| Redis            | `docker compose up redis`                    | redis://127.0.0.1:6379 |
+| Next.js          | `npm run dev`                                | http://localhost:3000  |
+| Indexing worker  | `python -m app.ingest.worker` (droply-rag)   | —                      |
+| RAG chat API     | `uvicorn main:app --reload --port 8081`      | http://localhost:8081  |
 
 ## Useful scripts
 
 ```bash
-pnpm db:push                 # push Drizzle schema
-pnpm db:studio               # open Drizzle Studio
-pnpm db:enable-pgvector      # enable pgvector extension
-pnpm lint
-pnpm build
+npm run db:push
+npm run db:studio
+npm run db:enable-pgvector
+npm run lint
+npm run build
 ```
 
 ## Learn More
 
 - [Next.js Documentation](https://nextjs.org/docs)
-- [Inngest Dev Server](https://www.inngest.com/docs/local-development)
+- [BullMQ](https://docs.bullmq.io/)
 - [droply-rag README](../droply-rag/README.md) (sibling folder)

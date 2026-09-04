@@ -1,7 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  output: "standalone",
+  serverExternalPackages: ["bullmq", "ioredis"],
+  outputFileTracingIncludes: {
+    "/*": [
+      "./node_modules/bullmq/**/*",
+      "./node_modules/ioredis/**/*",
+      "./node_modules/msgpackr/**/*",
+    ],
+  },
 };
 
 export default nextConfig;

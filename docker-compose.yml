@@ -1,0 +1,109 @@
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    expose:
+      - "6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - droply-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+        NEXT_PUBLIC_CLERK_SIGN_IN_URL: ${NEXT_PUBLIC_CLERK_SIGN_IN_URL:-/signin}
+        NEXT_PUBLIC_CLERK_SIGN_UP_URL: ${NEXT_PUBLIC_CLERK_SIGN_UP_URL:-/signup}
+        NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL: ${NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL:-/dashboard}
+        NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL: ${NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL:-/}
+        NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL: ${NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL}
+        NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY: ${NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY}
+        NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT: ${NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT}
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+    restart: unless-stopped
+    expose:
+      - "3000"
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://redis:6379
+      RAG_INGEST_URL: http://rag:8001
+    depends_on:
+      redis:
+        condition: service_healthy
+      rag:
+        condition: service_started
+
+  rag:
+    image: droply-rag:local
+    build:
+      context: ../droply-rag
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    expose:
+      - "8001"
+    env_file:
+      - ../droply-rag/.env
+    environment:
+      PORT: "8001"
+      PYTHONUNBUFFERED: "1"
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health')",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  worker:
+    image: droply-rag:local
+    build:
+      context: ../droply-rag
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ../droply-rag/.env
+    environment:
+      REDIS_URL: redis://redis:6379
+      APP_URL: http://web:3000
+      PYTHONUNBUFFERED: "1"
+    command: ["python", "-m", "app.ingest.worker"]
+    depends_on:
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_started
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+
+volumes:
+  droply-redis:
+  caddy_data:
+  caddy_config:

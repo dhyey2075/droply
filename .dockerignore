@@ -1,0 +1,16 @@
+node_modules
+.next
+.git
+.gitignore
+*.md
+.env*
+.clerk
+.vercel
+coverage
+secret
+*.pem
+npm-debug.log*
+.tsbuildinfo
+next-env.d.ts
+docker-compose*.yml
+Dockerfile*
