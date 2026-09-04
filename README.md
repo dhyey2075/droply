@@ -27,24 +27,51 @@ docker compose up --build -d
 
 Caddy terminates HTTPS and reverse-proxies to Next. Next talks to RAG at `http://rag:8001`. Redis is not published.
 
+### Build and push images (local machine)
+
+Build on a machine with enough RAM, then push to Docker Hub. Do not compile Next on a small VPS.
+
+From `droply` (PowerShell). `NEXT_PUBLIC_*` values are baked into the web image at build time:
+
+```powershell
+$env:DOCKERHUB_USER = "YOUR_DOCKERHUB_USERNAME"
+$env:IMAGE_TAG = "latest"
+$env:NEXT_PUBLIC_APP_URL = "https://droply.dhyeyparekh.in"
+
+docker login
+
+docker compose build web rag
+docker compose push web rag
+```
+
+That publishes:
+
+- `YOUR_DOCKERHUB_USERNAME/droply-web:latest`
+- `YOUR_DOCKERHUB_USERNAME/droply-rag:latest`
+
+Create those repos on Docker Hub (or let the first push create them). Keep them public, or run `docker login` on the VPS so it can pull private images.
+
 ### VPS deploy
 
-1. Point a DNS **A record** at the VPS (`droply.dhyey2075.fun` or whatever you set as `DOMAIN`).
+1. Point a DNS **A record** at the VPS (`droply.dhyeyparekh.in` or whatever you set as `DOMAIN`).
 2. Open **80** and **443** on the firewall. Nothing else needs to be public.
 3. On the VPS, clone `droply` and `droply-rag` as siblings, copy `.env` files.
 4. In `droply/.env` set:
 
 ```env
-DOMAIN=droply.dhyey2075.fun
-NEXT_PUBLIC_APP_URL=https://droply.dhyey2075.fun
+DOMAIN=droply.dhyeyparekh.in
+NEXT_PUBLIC_APP_URL=https://droply.dhyeyparekh.in
+DOCKERHUB_USER=YOUR_DOCKERHUB_USERNAME
+IMAGE_TAG=latest
 ```
 
 5. In Clerk, add that HTTPS origin (and sign-in redirect URLs).
-6. Rebuild Next so `NEXT_PUBLIC_*` values are baked in, then start:
+6. Copy the latest `docker-compose.yml`, `docker-compose.vps.yml`, and `Caddyfile` onto the VPS, then pull and run (no `--build`):
 
 ```bash
 cd droply
-docker compose up --build -d
+docker compose -f docker-compose.yml -f docker-compose.vps.yml pull
+docker compose -f docker-compose.yml -f docker-compose.vps.yml up -d
 ```
 
 Caddy fetches a Let’s Encrypt cert automatically. Logs: `docker compose logs -f caddy web worker rag`.

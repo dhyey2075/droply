@@ -29,6 +29,7 @@ import {
   X,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { MarkdownAnswer } from "@/components/MarkdownAnswer"
 import {
   Sheet,
   SheetContent,
@@ -606,10 +607,12 @@ function MessageBubble({
               <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/70 [animation-delay:-0.1s]" />
               <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/70" />
             </div>
-          ) : (
+          ) : isUser ? (
             <p className="whitespace-pre-wrap break-words">
               {message.content}
             </p>
+          ) : (
+            <MarkdownAnswer text={message.content} />
           )}
         </div>
 
