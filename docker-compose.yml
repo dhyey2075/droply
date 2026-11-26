@@ -15,7 +15,6 @@ services:
 
   web:
     image: ${DOCKERHUB_USER}/droply-web:${IMAGE_TAG:-latest}
-    platform: linux/amd64
     build:
       context: .
       dockerfile: Dockerfile
@@ -45,7 +44,6 @@ services:
 
   rag:
     image: ${DOCKERHUB_USER}/droply-rag:${IMAGE_TAG:-latest}
-    platform: linux/amd64
     build:
       context: ../droply-rag
       dockerfile: Dockerfile
@@ -73,7 +71,6 @@ services:
 
   worker:
     image: ${DOCKERHUB_USER}/droply-rag:${IMAGE_TAG:-latest}
-    platform: linux/amd64
     build:
       context: ../droply-rag
       dockerfile: Dockerfile

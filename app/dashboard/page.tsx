@@ -5,7 +5,7 @@ import { useTheme } from 'next-themes'
 import UploadExample from '@/components/FileUpload'
 import { IndexingStatusBadge } from '@/components/IndexingStatusBadge'
 import prettyBytes from 'pretty-bytes'
-import { ArrowLeft, ExternalLink, File, Folder, FolderPlus, Share2, Trash2Icon, Grid2X2, ListFilter, Loader2, Pencil, FolderOpen, Sun, Moon, Monitor, Cloud, MessageSquare } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ExternalLink, File, Folder, FolderPlus, HardDrive, Search, Share2, Trash2Icon, Grid2X2, ListFilter, Loader2, Pencil, FolderOpen, Sun, Moon, Monitor, Cloud, MessageSquare, X } from 'lucide-react'
 import { getClassWithColor } from 'file-icons-js'
 import 'file-icons-js/css/style.css'
 import { Bounce, ToastContainer, toast } from 'react-toastify'
@@ -25,6 +25,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  MEDIA_SIZE_OPTIONS,
+  MEDIA_TYPE_OPTIONS,
+  ROOT_FOLDER_ID,
+} from "@/lib/media/filters"
+import { cn } from "@/lib/utils"
+import type { MediaSizeFilter, MediaTypeFilter } from "@/schemas/mediaQuerySchema"
 
 export interface File {
   id: string
@@ -55,7 +71,9 @@ const Page: React.FC = () => {
   const [folderName, setFolderName] = useState<string>('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const uploadRef = useRef<HTMLInputElement>(null)
-  const [folderHierarchy, setFolderHierarchy] = useState<[string, string][]>([["00000000-0000-0000-0000-000000000000", ""]])
+  const prevFolderIdRef = useRef<string | null>(null)
+  const hasFetchedMediaRef = useRef(false)
+  const [folderHierarchy, setFolderHierarchy] = useState<[string, string][]>([[ROOT_FOLDER_ID, ""]])
   const [deletingFiles, setDeletingFiles] = useState<Set<string>>(new Set())
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [renamingFile, setRenamingFile] = useState<File | null>(null)
@@ -72,11 +90,19 @@ const Page: React.FC = () => {
   const [oneDriveFiles, setOneDriveFiles] = useState<File[]>([])
   const [oneDriveFolderHierarchy, setOneDriveFolderHierarchy] = useState<[string, string][]>([["root", "OneDrive"]])
   const [isLoadingOneDrive, setIsLoadingOneDrive] = useState<boolean>(false)
+  const [searchInput, setSearchInput] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [typeFilter, setTypeFilter] = useState<MediaTypeFilter>('all')
+  const [sizeFilter, setSizeFilter] = useState<MediaSizeFilter>('all')
 
   const { isSignedIn, user } = useUser()
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+
+  const currentFolderId = folderHierarchy[folderHierarchy.length - 1][0]
+  const hasActiveFilters =
+    Boolean(debouncedSearch) || typeFilter !== 'all' || sizeFilter !== 'all'
 
   useEffect(() => {
     setMounted(true)
@@ -91,6 +117,13 @@ const Page: React.FC = () => {
     
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearch(searchInput.trim())
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [searchInput])
 
   const notifyError = useCallback((message: string) => toast.error(message, {
     position: "top-right",
@@ -116,13 +149,28 @@ const Page: React.FC = () => {
     transition: Bounce,
   }), [])
 
-  const fetchUserMedia = useCallback(async (options?: { silent?: boolean }) => {
+  const fetchUserMedia = useCallback(async (options?: {
+    silent?: boolean
+    parentId?: string
+    q?: string
+    type?: MediaTypeFilter
+    size?: MediaSizeFilter
+  }) => {
     const silent = options?.silent ?? false
     if (!silent) {
       setIsLoading(true)
     }
     try {
-      const response = await fetch('/api/media', {
+      const params = new URLSearchParams()
+      params.set('parentId', options?.parentId ?? currentFolderId)
+      const q = options?.q ?? debouncedSearch
+      if (q) params.set('q', q)
+      const type = options?.type ?? typeFilter
+      if (type !== 'all') params.set('type', type)
+      const size = options?.size ?? sizeFilter
+      if (size !== 'all') params.set('size', size)
+
+      const response = await fetch(`/api/media?${params.toString()}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -131,6 +179,8 @@ const Page: React.FC = () => {
       const data = await response.json()
       if (Array.isArray(data)) {
         setMedia(data)
+      } else if (!silent && data?.error) {
+        notifyError(typeof data.error === 'string' ? data.error : 'Failed to fetch files')
       }
     } catch (error) {
       if (!silent) {
@@ -142,7 +192,7 @@ const Page: React.FC = () => {
         setIsLoading(false)
       }
     }
-  }, [notifyError])
+  }, [notifyError, currentFolderId, debouncedSearch, typeFilter, sizeFilter])
 
   const checkGDriveStatus = useCallback(async () => {
     try {
@@ -215,10 +265,20 @@ const Page: React.FC = () => {
   }, [isOneDriveConnected, notifyError])
 
   useEffect(() => {
-    fetchUserMedia()
     checkGDriveStatus()
     checkOneDriveStatus()
-  }, [fetchUserMedia, checkGDriveStatus, checkOneDriveStatus])
+  }, [checkGDriveStatus, checkOneDriveStatus])
+
+  useEffect(() => {
+    if (!isSignedIn) return
+    const folderChanged = prevFolderIdRef.current !== currentFolderId
+    prevFolderIdRef.current = currentFolderId
+    // Avoid skeleton flash while typing/searching; still show loading on first load / folder change.
+    const silent = hasFetchedMediaRef.current && !folderChanged
+    void fetchUserMedia({ silent }).finally(() => {
+      hasFetchedMediaRef.current = true
+    })
+  }, [isSignedIn, fetchUserMedia, currentFolderId])
 
   // Server-push indexing updates (SSE) — no client polling
   useEffect(() => {
@@ -290,10 +350,9 @@ const Page: React.FC = () => {
 
   if (!isSignedIn) return null
 
-  const currentFolderId = folderHierarchy[folderHierarchy.length - 1][0]
-  const droplyFiles = media.filter(item => item.parentId === currentFolderId)
+  // Droply listings are already scoped/filtered by GET /api/media (current folder + search/type/size).
   const currentFiles = activeSource === 'droply' 
-    ? droplyFiles 
+    ? media
     : activeSource === 'gdrive' 
       ? gDriveFiles 
       : oneDriveFiles
@@ -302,6 +361,18 @@ const Page: React.FC = () => {
     : activeSource === 'gdrive' 
       ? isLoadingGDrive 
       : isLoadingOneDrive
+
+  const clearFilters = () => {
+    setSearchInput('')
+    setDebouncedSearch('')
+    setTypeFilter('all')
+    setSizeFilter('all')
+  }
+
+  const typeFilterLabel =
+    MEDIA_TYPE_OPTIONS.find((option) => option.value === typeFilter)?.label ?? 'All types'
+  const sizeFilterLabel =
+    MEDIA_SIZE_OPTIONS.find((option) => option.value === sizeFilter)?.label ?? 'Any size'
 
   const handleFileUploadComplete = (file?: File) => {
     if (file) {
@@ -513,7 +584,7 @@ const Page: React.FC = () => {
               <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground min-w-0 overflow-x-auto scrollbar-hide">
                 {folderHierarchy.map((item, idx) => {
                   const isLast = idx === folderHierarchy.length - 1
-                  const isRoot = item[0] === "00000000-0000-0000-0000-000000000000"
+                  const isRoot = item[0] === ROOT_FOLDER_ID
                   const displayName = isRoot ? "" : (item[1] || "")
                   
                   return (
@@ -631,70 +702,180 @@ const Page: React.FC = () => {
           )}
 
           {activeSource === 'droply' && (
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
-              <div className="flex items-center gap-2 flex-1 sm:flex-initial">
-                <Input
-                  placeholder="New folder name"
-                  value={folderName}
-                  onChange={(e) => setFolderName(e.target.value)}
-                  className="flex-1 sm:w-[200px] text-sm sm:text-base"
-                />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg border-2 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600 dark:hover:bg-blue-950/30 dark:hover:border-blue-800 dark:hover:text-blue-400 transition-all duration-200 shadow-sm hover:shadow-md flex-shrink-0 touch-manipulation"
-                  onClick={async () => {
-                    if (!folderName.trim() || isCreatingFolder) return
-                    setIsCreatingFolder(true)
-                    try {
-                      const response = await fetch('/api/folders/create', {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                          name: folderName,
-                          userId: user.id,
-                          parentId: currentFolderId,
-                        }),
-                      })
-                      const data = await response.json()
-                      if (data.success) {
-                        setFolderName('')
-                        if (data.folder) {
-                          setMedia(prev => {
-                            if (prev.some(item => item.id === data.folder.id)) return prev
-                            return [data.folder, ...prev]
-                          })
+            <div className="flex flex-col gap-2 sm:gap-3">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
+                <div className="flex items-center gap-2 flex-1 sm:flex-initial">
+                  <Input
+                    placeholder="New folder name"
+                    value={folderName}
+                    onChange={(e) => setFolderName(e.target.value)}
+                    className="flex-1 sm:w-[200px] text-sm sm:text-base"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg border-2 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600 dark:hover:bg-blue-950/30 dark:hover:border-blue-800 dark:hover:text-blue-400 transition-all duration-200 shadow-sm hover:shadow-md flex-shrink-0 touch-manipulation"
+                    onClick={async () => {
+                      if (!folderName.trim() || isCreatingFolder) return
+                      setIsCreatingFolder(true)
+                      try {
+                        const response = await fetch('/api/folders/create', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({
+                            name: folderName,
+                            userId: user.id,
+                            parentId: currentFolderId,
+                          }),
+                        })
+                        const data = await response.json()
+                        if (data.success) {
+                          setFolderName('')
+                          if (data.folder) {
+                            setMedia(prev => {
+                              if (prev.some(item => item.id === data.folder.id)) return prev
+                              return [data.folder, ...prev]
+                            })
+                          }
+                          void fetchUserMedia({ silent: true })
+                          notifySuccess("Folder created successfully")
+                        } else {
+                          notifyError(data.message)
                         }
-                        void fetchUserMedia({ silent: true })
-                        notifySuccess("Folder created successfully")
-                      } else {
-                        notifyError(data.message)
+                      } catch {
+                        notifyError('Failed to create folder')
+                      } finally {
+                        setIsCreatingFolder(false)
                       }
-                    } catch {
-                      notifyError('Failed to create folder')
-                    } finally {
-                      setIsCreatingFolder(false)
-                    }
-                  }}
-                  disabled={isCreatingFolder}
-                  title="Create folder"
-                >
-                  {isCreatingFolder ? (
-                    <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
-                  ) : (
-                    <FolderPlus className="h-4 w-4 sm:h-5 sm:w-5" />
-                  )}
-                </Button>
+                    }}
+                    disabled={isCreatingFolder}
+                    title="Create folder"
+                  >
+                    {isCreatingFolder ? (
+                      <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
+                    ) : (
+                      <FolderPlus className="h-4 w-4 sm:h-5 sm:w-5" />
+                    )}
+                  </Button>
+                </div>
+
+                <div className="flex-shrink-0">
+                  <UploadExample
+                    fileInputRef={uploadRef}
+                    parentId={currentFolderId}
+                    onUploadComplete={handleFileUploadComplete}
+                  />
+                </div>
               </div>
 
-              <div className="flex-shrink-0">
-                <UploadExample 
-                  fileInputRef={uploadRef} 
-                  parentId={currentFolderId} 
-                  onUploadComplete={handleFileUploadComplete}
-                />
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <div className="relative flex-1 min-w-0">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    placeholder="Search files in this folder…"
+                    className="pl-9 pr-9 text-sm sm:text-base"
+                    aria-label="Search file names in current folder"
+                  />
+                  {searchInput && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 rounded-md"
+                      onClick={() => {
+                        setSearchInput('')
+                        setDebouncedSearch('')
+                      }}
+                      title="Clear search"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "h-9 sm:h-10 rounded-lg gap-1.5 touch-manipulation",
+                          typeFilter !== 'all' && "border-blue-300 text-blue-700 dark:border-blue-800 dark:text-blue-300"
+                        )}
+                      >
+                        <File className="h-4 w-4" />
+                        <span className="truncate max-w-[7rem] sm:max-w-none">{typeFilterLabel}</span>
+                        <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuLabel>File type</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuRadioGroup
+                        value={typeFilter}
+                        onValueChange={(value) => setTypeFilter(value as MediaTypeFilter)}
+                      >
+                        {MEDIA_TYPE_OPTIONS.map((option) => (
+                          <DropdownMenuRadioItem key={option.value} value={option.value}>
+                            {option.label}
+                          </DropdownMenuRadioItem>
+                        ))}
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "h-9 sm:h-10 rounded-lg gap-1.5 touch-manipulation",
+                          sizeFilter !== 'all' && "border-blue-300 text-blue-700 dark:border-blue-800 dark:text-blue-300"
+                        )}
+                      >
+                        <HardDrive className="h-4 w-4" />
+                        <span className="truncate max-w-[7rem] sm:max-w-none">{sizeFilterLabel}</span>
+                        <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-52">
+                      <DropdownMenuLabel>File size</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuRadioGroup
+                        value={sizeFilter}
+                        onValueChange={(value) => setSizeFilter(value as MediaSizeFilter)}
+                      >
+                        {MEDIA_SIZE_OPTIONS.map((option) => (
+                          <DropdownMenuRadioItem key={option.value} value={option.value}>
+                            <span className="flex flex-col">
+                              <span>{option.label}</span>
+                              {option.value !== 'all' && (
+                                <span className="text-xs text-muted-foreground">{option.description}</span>
+                              )}
+                            </span>
+                          </DropdownMenuRadioItem>
+                        ))}
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {hasActiveFilters && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="h-9 sm:h-10 rounded-lg gap-1.5 touch-manipulation"
+                      onClick={clearFilters}
+                      title="Clear search and filters"
+                    >
+                      <X className="h-4 w-4" />
+                      <span className="hidden sm:inline">Clear</span>
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -731,15 +912,28 @@ const Page: React.FC = () => {
                 ? 'No files in Google Drive' 
                 : activeSource === 'onedrive'
                   ? 'No files in OneDrive'
-                  : 'This folder is empty'}
+                  : hasActiveFilters
+                    ? 'No matching files'
+                    : 'This folder is empty'}
             </p>
             <p className="text-xs sm:text-sm text-muted-foreground">
               {activeSource === 'gdrive' 
                 ? 'Files from your Google Drive will appear here' 
                 : activeSource === 'onedrive'
                   ? 'Files from your OneDrive will appear here'
-                  : 'Upload files or create a folder to get started'}
+                  : hasActiveFilters
+                    ? 'Try a different name, type, or size filter in this folder'
+                    : 'Upload files or create a folder to get started'}
             </p>
+            {activeSource === 'droply' && hasActiveFilters && (
+              <Button
+                variant="outline"
+                className="mt-4 rounded-lg"
+                onClick={clearFilters}
+              >
+                Clear filters
+              </Button>
+            )}
           </div>
         ) : (
           <div className={isMobile ? "space-y-2" : (viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4" : "space-y-2")}>

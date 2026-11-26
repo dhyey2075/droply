@@ -7,15 +7,17 @@ File library app with document Q&A (RAG).
 - Node.js 20+
 - Python 3.12+ (for the RAG chat API and indexing worker)
 - Redis (Docker Compose in this repo, or any Redis reachable at `REDIS_URL`)
-- Env vars configured in `.env` (see `RAG_INGEST_URL`, `RAG_INTERNAL_KEY`, `REDIS_URL`, etc.)
+- Env vars configured in `.env` (see `RAG_INGEST_URL`, `RAG_INTERNAL_KEY`, `REDIS_URL`, etc.). Copy from `.env.example` as a starting point.
 
 ## Docker Compose (Next + RAG + worker + Caddy)
 
-From `droply`, with `.env` filled in both `droply` and `droply-rag`:
+From `droply`, with `.env` filled in both `droply` and `droply-rag`. For local access, set `DOMAIN=localhost` and `NEXT_PUBLIC_APP_URL=http://localhost` in `droply/.env`:
 
 ```bash
-docker compose up --build -d
+IMAGE_TAG=local docker compose up --build -d
 ```
+
+Open `http://localhost`. The local images use your machine's native architecture; the `local` tag keeps them separate from images prepared for the VPS.
 
 | Service | Container | Public |
 | --- | --- | --- |
@@ -43,8 +45,8 @@ $env:NEXT_PUBLIC_APP_URL = "https://droply.dhyeyparekh.in"
 
 docker login
 
-docker compose build web rag
-docker compose push web rag
+docker compose -f docker-compose.yml -f docker-compose.build-amd64.yml build web rag
+docker compose -f docker-compose.yml -f docker-compose.build-amd64.yml push web rag
 ```
 
 That publishes:

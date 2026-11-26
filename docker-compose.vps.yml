@@ -7,18 +7,28 @@ networks:
     name: proxy
 
 services:
+  # Watchtower only updates containers carrying this label.
   web:
     build: !reset null
+    platform: linux/amd64
     image: ${DOCKERHUB_USER}/droply-web:${IMAGE_TAG:-latest}
     pull_policy: always
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
   rag:
     build: !reset null
+    platform: linux/amd64
     image: ${DOCKERHUB_USER}/droply-rag:${IMAGE_TAG:-latest}
     pull_policy: always
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
   worker:
     build: !reset null
+    platform: linux/amd64
     image: ${DOCKERHUB_USER}/droply-rag:${IMAGE_TAG:-latest}
     pull_policy: always
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
   caddy:
     ports: !reset []
     expose:

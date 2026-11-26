@@ -1,0 +1,8 @@
+# Use only when building images for the AMD64 VPS from another architecture.
+services:
+  web:
+    platform: linux/amd64
+  rag:
+    platform: linux/amd64
+  worker:
+    platform: linux/amd64
