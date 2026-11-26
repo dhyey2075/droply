@@ -2,6 +2,10 @@
 
 import { CheckCircle2, Loader2, AlertCircle, Clock } from "lucide-react"
 import type { IndexingStatusValue } from "@/lib/indexing-events-hub"
+import { cn } from "@/lib/utils"
+
+const base =
+  "inline-flex items-center gap-1 rounded-md px-1.5 py-px text-[11px] font-medium leading-5"
 
 export function IndexingStatusBadge({
   status,
@@ -14,7 +18,7 @@ export function IndexingStatusBadge({
 
   if (status === "COMPLETED") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 text-[10px] sm:text-[11px] font-medium">
+      <span className={cn(base, "bg-success/10 text-success")}>
         <CheckCircle2 className="h-3 w-3" />
         Indexed
       </span>
@@ -23,16 +27,16 @@ export function IndexingStatusBadge({
 
   if (status === "INPROGRESS") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 px-2 py-0.5 text-[10px] sm:text-[11px] font-medium">
+      <span className={cn(base, "bg-brand-soft text-brand")}>
         <Loader2 className="h-3 w-3 animate-spin" />
-        Indexing…
+        Indexing
       </span>
     )
   }
 
   if (status === "PENDING") {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 px-2 py-0.5 text-[10px] sm:text-[11px] font-medium">
+      <span className={cn(base, "bg-warning/10 text-warning")}>
         <Clock className="h-3 w-3" />
         Queued
       </span>
@@ -42,7 +46,7 @@ export function IndexingStatusBadge({
   if (status === "FAILED") {
     return (
       <span
-        className="inline-flex items-center gap-1 rounded-full bg-red-500/15 text-red-600 dark:text-red-400 px-2 py-0.5 text-[10px] sm:text-[11px] font-medium"
+        className={cn(base, "bg-destructive/10 text-destructive")}
         title={error || "Indexing failed"}
       >
         <AlertCircle className="h-3 w-3" />

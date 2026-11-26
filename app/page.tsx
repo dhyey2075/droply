@@ -1,118 +1,116 @@
-"use client";
-
 import Link from "next/link";
+import { ArrowRight, FolderTree, Link2, MessageSquareText, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ArrowUpRight, FileUp, Share2, Lock, Folder, Globe } from "lucide-react";
+import { Wordmark } from "@/components/Wordmark";
+import { HeroDemo } from "@/components/landing/HeroDemo";
+
+const FEATURES = [
+  {
+    icon: Upload,
+    title: "Upload anything",
+    body: "Drop in images, PDFs, Word documents, spreadsheets and text files up to 100 MB each.",
+  },
+  {
+    icon: FolderTree,
+    title: "Folders and search",
+    body: "Keep work in folders, then narrow any folder by name, file type or size.",
+  },
+  {
+    icon: Link2,
+    title: "Share a link",
+    body: "Copy a direct link to any file and send it wherever you need it.",
+  },
+  {
+    icon: MessageSquareText,
+    title: "Ask your documents",
+    body: "Documents are indexed after upload. Ask a question and see which files the answer came from.",
+  },
+];
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <header className="container mx-auto px-4 sm:px-6 py-12 sm:py-20">
-        <div className="flex flex-col items-center text-center gap-6 sm:gap-8 max-w-3xl mx-auto">
-          <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold tracking-tight px-2">
-            Share files with ease and{" "}
-            <span className="text-blue-500">security</span>
-          </h1>
-          <p className="text-muted-foreground text-base sm:text-lg md:text-xl max-w-2xl px-4">
-            Droply provides a secure, fast, and intuitive way to store and share your files. Built for individuals and teams who value simplicity and privacy.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-4 w-full sm:w-auto px-4 sm:px-0">
-            <Link href="/signup" className="w-full sm:w-auto">
-              <Button size="lg" className="gap-2 w-full sm:w-auto touch-manipulation">
-                Get Started <ArrowUpRight className="h-4 w-4" />
-              </Button>
-            </Link>
-            <Link href="/signin" className="w-full sm:w-auto">
-              <Button variant="outline" size="lg" className="w-full sm:w-auto touch-manipulation">
-                Sign In
-              </Button>
-            </Link>
-          </div>
-        </div>
+      <header className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 sm:px-8">
+        <Wordmark />
+        <nav className="flex items-center gap-1">
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/signin">Sign in</Link>
+          </Button>
+          <Button asChild size="sm">
+            <Link href="/signup">Get started</Link>
+          </Button>
+        </nav>
       </header>
 
-      {/* Features Section */}
-      <section className="container mx-auto px-4 sm:px-6 py-12 sm:py-20 border-t">
-        <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8 sm:mb-16 px-4">Why Choose Droply?</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-          <div className="flex flex-col items-center text-center gap-4 p-6">
-            <div className="h-12 w-12 rounded-full bg-blue-500/10 flex items-center justify-center">
-              <FileUp className="h-6 w-6 text-blue-500" />
-            </div>
-            <h3 className="text-xl font-semibold">Easy File Upload</h3>
-            <p className="text-muted-foreground">
-              Drag and drop or click to upload files of any size. Support for all file types.
+      <main>
+        <section className="mx-auto grid max-w-6xl items-center gap-12 px-5 pt-10 pb-16 sm:px-8 sm:pt-16 sm:pb-24 xl:max-w-[1240px] xl:grid-cols-[minmax(0,400px)_760px] xl:justify-between xl:gap-10">
+          <div className="max-w-xl">
+            <h1 className="text-[2.5rem] leading-[1.05] font-semibold tracking-[-0.035em] text-balance sm:text-[3.25rem]">
+              Store files. Share links. Ask your documents.
+            </h1>
+            <p className="mt-5 text-base leading-relaxed text-muted-foreground sm:text-lg">
+              Droply keeps your files in folders, gives each one a link you can
+              share, and reads your documents so you can ask questions about them.
             </p>
-          </div>
-
-          <div className="flex flex-col items-center text-center gap-4 p-6">
-            <div className="h-12 w-12 rounded-full bg-blue-500/10 flex items-center justify-center">
-              <Share2 className="h-6 w-6 text-blue-500" />
-            </div>
-            <h3 className="text-xl font-semibold">Quick Sharing</h3>
-            <p className="text-muted-foreground">
-              Generate shareable links instantly and control who can access your files.
-            </p>
-          </div>
-
-          <div className="flex flex-col items-center text-center gap-4 p-6">
-            <div className="h-12 w-12 rounded-full bg-blue-500/10 flex items-center justify-center">
-              <Lock className="h-6 w-6 text-blue-500" />
-            </div>
-            <h3 className="text-xl font-semibold">Secure Storage</h3>
-            <p className="text-muted-foreground">
-              Your files are encrypted and stored securely with enterprise-grade security.
-            </p>
-          </div>
-
-          <div className="flex flex-col items-center text-center gap-4 p-6">
-            <div className="h-12 w-12 rounded-full bg-blue-500/10 flex items-center justify-center">
-              <Folder className="h-6 w-6 text-blue-500" />
-            </div>
-            <h3 className="text-xl font-semibold">Organization</h3>
-            <p className="text-muted-foreground">
-              Create folders, move files, and keep everything organized your way.
-            </p>
-          </div>
-
-          <div className="flex flex-col items-center text-center gap-4 p-6">
-            <div className="h-12 w-12 rounded-full bg-blue-500/10 flex items-center justify-center">
-              <Globe className="h-6 w-6 text-blue-500" />
-            </div>
-            <h3 className="text-xl font-semibold">Access Anywhere</h3>
-            <p className="text-muted-foreground">
-              Access your files from any device, anywhere in the world.
-            </p>
-          </div>
-
-          <div className="flex flex-col items-center text-center gap-4 p-6 border border-dashed rounded-lg">
-            <h3 className="text-xl font-semibold">And More...</h3>
-            <p className="text-muted-foreground">
-              Dark mode, file previews, and many other features to enhance your experience.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="container mx-auto px-4 sm:px-6 py-12 sm:py-20 border-t">
-        <div className="bg-blue-500 rounded-2xl p-6 sm:p-8 md:p-12 text-white text-center">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4 px-2">
-            Ready to get started?
-          </h2>
-          <p className="text-blue-100 mb-6 sm:mb-8 max-w-xl mx-auto px-4 text-sm sm:text-base">
-            Join thousands of users who trust Droply for their file sharing needs.
-          </p>
-          <div className="flex justify-center px-4">
-            <Link href="/signup" className="w-full sm:w-auto">
-              <Button size="lg" variant="secondary" className="gap-2 w-full sm:w-auto touch-manipulation">
-                Create Account <ArrowUpRight className="h-4 w-4" />
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Button asChild size="lg">
+                <Link href="/signup">
+                  Create a free account
+                  <ArrowRight />
+                </Link>
               </Button>
-            </Link>
+              <Button asChild size="lg" variant="outline">
+                <Link href="/signin">Sign in</Link>
+              </Button>
+            </div>
           </div>
+
+          <div className="w-full">
+            <HeroDemo />
+          </div>
+        </section>
+
+        <section className="border-t">
+          <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-20">
+            <h2 className="max-w-md text-2xl font-semibold tracking-[-0.02em]">
+              Everything your files need, nothing they don&apos;t.
+            </h2>
+            <div className="mt-10 grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
+              {FEATURES.map(({ icon: Icon, title, body }) => (
+                <div key={title} className="border-t pt-5">
+                  <Icon className="size-4 text-muted-foreground" strokeWidth={1.75} />
+                  <h3 className="mt-4 text-[15px] font-medium">{title}</h3>
+                  <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="border-t">
+          <div className="mx-auto flex max-w-6xl flex-col items-start gap-6 px-5 py-16 sm:flex-row sm:items-center sm:justify-between sm:px-8 sm:py-20">
+            <div>
+              <h2 className="text-2xl font-semibold tracking-[-0.02em]">Start with your first upload.</h2>
+              <p className="mt-2 text-muted-foreground">It takes a minute to set up an account.</p>
+            </div>
+            <Button asChild size="lg">
+              <Link href="/signup">
+                Get started
+                <ArrowRight />
+              </Link>
+            </Button>
+          </div>
+        </section>
+      </main>
+
+      <footer className="border-t">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 text-sm text-muted-foreground sm:px-8">
+          <span>Droply</span>
+          <Link href="/signin" className="hover:text-foreground">
+            Sign in
+          </Link>
         </div>
-      </section>
+      </footer>
     </div>
   );
 }

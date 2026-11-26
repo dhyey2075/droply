@@ -57,7 +57,7 @@ const UploadExample: React.FC<UploadExampleProps> = ({ fileInputRef, parentId, o
         pauseOnHover: true,
         draggable: true,
         progress: undefined,
-        theme: "dark",
+        theme: "light",
         transition: Bounce,
       })
 
@@ -179,7 +179,7 @@ const UploadExample: React.FC<UploadExampleProps> = ({ fileInputRef, parentId, o
             />
             <Button
                 variant="default"
-                className="rounded-lg hover:scale-105 active:scale-95 transition-all duration-200 shadow-md hover:shadow-lg font-medium text-sm sm:text-base touch-manipulation w-full sm:w-auto"
+                className="rounded-lg transition-colors duration-150 font-medium text-sm sm:text-base touch-manipulation w-full sm:w-auto"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploading}
             >

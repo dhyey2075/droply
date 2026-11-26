@@ -10,6 +10,7 @@ const compat = new FlatCompat({
 });
 
 const eslintConfig = [
+  { ignores: ["components/stageshow/kit/**"] },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
 ];
 

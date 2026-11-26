@@ -25,7 +25,6 @@ import {
   MessageSquare,
   MessageSquarePlus,
   PanelRight,
-  Sparkles,
   X,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -122,7 +121,7 @@ function ConversationList({
       <div className="p-3 pb-2">
         <Button
           onClick={onNewChat}
-          className="h-11 w-full justify-start gap-2 rounded-2xl text-sm font-medium shadow-sm"
+          className="h-11 w-full justify-start gap-2 rounded-xl text-sm font-medium"
         >
           <MessageSquarePlus className="h-4 w-4" />
           New chat
@@ -155,10 +154,10 @@ function ConversationList({
                   type="button"
                   onClick={() => onSelect(c.id)}
                   className={cn(
-                    "group flex w-full items-start gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors",
+                    "group flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
                     active
-                      ? "bg-background shadow-sm ring-1 ring-border/70"
-                      : "hover:bg-background/70"
+                      ? "bg-background ring-1 ring-border/70"
+                      : "hover:bg-background"
                   )}
                 >
                   <span
@@ -240,7 +239,7 @@ function SourcesPanel({
 
       <div className="flex-1 overflow-y-auto p-3 scrollbar-hide">
         {sources.length === 0 ? (
-          <div className="flex h-full min-h-[12rem] flex-col items-center justify-center rounded-2xl border border-dashed border-border/80 bg-muted/20 px-4 text-center">
+          <div className="flex h-full min-h-[12rem] flex-col items-center justify-center rounded-xl border border-dashed border-border/80 bg-muted/20 px-4 text-center">
             <FileText className="mb-3 h-8 w-8 text-muted-foreground/50" />
             <p className="text-sm font-medium">No sources yet</p>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -257,10 +256,10 @@ function SourcesPanel({
                   type="button"
                   onClick={() => onSelect(s.fileId)}
                   className={cn(
-                    "w-full rounded-2xl border px-3 py-3 text-left transition-all",
+                    "w-full rounded-xl border px-3 py-3 text-left transition-all",
                     active
-                      ? "border-foreground/15 bg-background shadow-sm"
-                      : "border-transparent bg-muted/40 hover:bg-muted/70"
+                      ? "border-foreground/15 bg-background"
+                      : "border-transparent bg-muted/60 hover:bg-muted/70"
                   )}
                 >
                   <div className="flex items-start gap-3">
@@ -283,7 +282,7 @@ function SourcesPanel({
         )}
 
         {selected && (
-          <div className="mt-4 overflow-hidden rounded-2xl border border-border/70 bg-background shadow-sm">
+          <div className="mt-4 overflow-hidden rounded-xl border border-border/70 bg-background">
             <div className="border-b border-border/60 px-3.5 py-3">
               <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                 Preview
@@ -383,7 +382,7 @@ function ScopePicker({
 
   return (
     <div className="mb-2 space-y-2">
-      <label className="flex cursor-pointer items-center gap-2.5 rounded-2xl border border-border/70 bg-background/80 px-3 py-2.5 transition-colors hover:bg-muted/30">
+      <label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-border/70 bg-card px-3 py-2.5 transition-colors hover:bg-muted/30">
         <input
           type="checkbox"
           checked={scopeAll}
@@ -402,7 +401,7 @@ function ScopePicker({
       </label>
 
       {!scopeAll && (
-        <div className="overflow-hidden rounded-2xl border border-border/70 bg-background/80">
+        <div className="overflow-hidden rounded-xl border border-border/70 bg-card">
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
@@ -479,7 +478,7 @@ function ScopePicker({
                         onClick={() => toggleFile(file.id)}
                         className={cn(
                           "flex w-full items-center gap-2.5 rounded-xl px-2 py-2 text-left transition-colors",
-                          checked ? "bg-muted/70" : "hover:bg-muted/40"
+                          checked ? "bg-muted/70" : "hover:bg-muted/60"
                         )}
                       >
                         <span
@@ -561,9 +560,8 @@ function MessageBubble({
       >
         {!isUser && (
           <div className="mb-2 flex flex-wrap items-center gap-2 px-1">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-foreground text-background">
-              <Sparkles className="h-3 w-3" />
-            </span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/droply.ico" alt="" className="h-5 w-5" />
             <span className="text-xs font-medium text-muted-foreground">
               Droply
             </span>
@@ -582,9 +580,9 @@ function MessageBubble({
 
         <div
           className={cn(
-            "rounded-[1.35rem] px-4 py-3 text-sm leading-relaxed",
+            "rounded-xl px-4 py-3 text-sm leading-relaxed",
             isUser
-              ? "rounded-br-md bg-primary text-primary-foreground shadow-sm"
+              ? "rounded-br-md bg-primary text-primary-foreground"
               : "rounded-bl-md bg-muted/70 text-foreground ring-1 ring-border/40"
           )}
         >
@@ -621,7 +619,7 @@ function MessageBubble({
             {message.sources.map((s) => {
               const label = s.fileName || "Document"
               const className =
-                "inline-flex max-w-[220px] items-center gap-1.5 rounded-full border border-border/70 bg-background/90 px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:border-border hover:text-foreground"
+                "inline-flex max-w-[220px] items-center gap-1.5 rounded-full border border-border/70 bg-card px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:border-border hover:text-foreground"
               if (s.fileUrl) {
                 return (
                   <a
@@ -962,14 +960,8 @@ export default function AskPage() {
 
   return (
     <div className="relative flex h-[100dvh] overflow-hidden bg-background">
-      {/* Soft atmosphere — stays within Droply neutrals */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_oklch(0.97_0_0)_0%,_transparent_55%),radial-gradient(ellipse_at_bottom_right,_oklch(0.96_0_0)_0%,_transparent_45%)] dark:bg-[radial-gradient(ellipse_at_top,_oklch(0.22_0_0)_0%,_transparent_55%),radial-gradient(ellipse_at_bottom_right,_oklch(0.2_0_0)_0%,_transparent_45%)]"
-      />
-
       {/* Left sidebar — desktop */}
-      <aside className="relative z-10 hidden w-[280px] shrink-0 border-r border-border/60 bg-sidebar/80 backdrop-blur-xl lg:flex lg:flex-col">
+      <aside className="relative z-10 hidden w-[280px] shrink-0 border-r border-border/60 bg-sidebar  lg:flex lg:flex-col">
         <div className="flex items-center gap-2 border-b border-border/60 px-4 py-3.5">
           <Link
             href="/dashboard"
@@ -996,7 +988,7 @@ export default function AskPage() {
 
       {/* Main column */}
       <div className="relative z-10 flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between gap-3 border-b border-border/60 bg-background/70 px-3 py-3 backdrop-blur-xl sm:px-5">
+        <header className="flex items-center justify-between gap-3 border-b border-border/60 bg-background px-3 py-3  sm:px-5">
           <div className="flex min-w-0 items-center gap-2">
             <Button
               variant="ghost"
@@ -1050,9 +1042,8 @@ export default function AskPage() {
                     transition={{ duration: 0.35 }}
                     className="w-full"
                   >
-                    <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-foreground text-background shadow-sm">
-                      <Sparkles className="h-6 w-6" />
-                    </div>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/droply.ico" alt="" className="mx-auto mb-5 h-12 w-12" />
                     <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
                       Ask anything about your files
                     </h2>
@@ -1074,7 +1065,7 @@ export default function AskPage() {
                             setQuestion(suggestion)
                             requestAnimationFrame(() => inputRef.current?.focus())
                           }}
-                          className="rounded-2xl border border-border/70 bg-background/80 px-3.5 py-3 text-left text-sm text-muted-foreground transition-colors hover:border-border hover:bg-muted/40 hover:text-foreground"
+                          className="rounded-xl border border-border/70 bg-card px-3.5 py-3 text-left text-sm text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 hover:text-foreground"
                         >
                           {suggestion}
                         </button>
@@ -1118,7 +1109,7 @@ export default function AskPage() {
                 />
                 <form
                   onSubmit={onSubmit}
-                  className="relative rounded-[1.75rem] border border-border/70 bg-background/90 p-2 shadow-[0_10px_40px_-18px_rgba(0,0,0,0.35)] backdrop-blur-xl ring-1 ring-black/5 dark:ring-white/5"
+                  className="relative rounded-xl border border-border/70 bg-card p-2  ring-1 ring-black/5 dark:ring-white/5"
                 >
                   <textarea
                     ref={inputRef}
@@ -1140,7 +1131,7 @@ export default function AskPage() {
                     type="submit"
                     size="icon"
                     disabled={!canSend}
-                    className="absolute bottom-3 right-3 h-10 w-10 rounded-full shadow-sm"
+                    className="absolute bottom-3 right-3 h-10 w-10 rounded-full"
                     aria-label="Send message"
                   >
                     {isSending ? (
@@ -1160,7 +1151,7 @@ export default function AskPage() {
           </main>
 
           {/* Right sources — desktop */}
-          <aside className="hidden w-[300px] shrink-0 border-l border-border/60 bg-sidebar/50 backdrop-blur-xl xl:flex xl:flex-col">
+          <aside className="hidden w-[300px] shrink-0 border-l border-border/60 bg-sidebar  xl:flex xl:flex-col">
             <SourcesPanel
               sources={sources}
               selectedId={selectedSourceId}

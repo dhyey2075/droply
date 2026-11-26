@@ -133,7 +133,7 @@ const Page: React.FC = () => {
     pauseOnHover: true,
     draggable: true,
     progress: undefined,
-    theme: "dark",
+    theme: "light",
     transition: Bounce,
   }), [])
 
@@ -145,7 +145,7 @@ const Page: React.FC = () => {
     pauseOnHover: true,
     draggable: true,
     progress: undefined,
-    theme: "dark",
+    theme: "light",
     transition: Bounce,
   }), [])
 
@@ -469,17 +469,19 @@ const Page: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="border-b sticky top-0 z-50 bg-background">
         <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
           <div className="flex items-center justify-between gap-2 sm:gap-4">
             <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
-              <h1 className="text-xl sm:text-2xl font-bold truncate">Droply</h1>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/droply.ico" alt="" className="h-6 w-6 shrink-0" />
+              <h1 className="text-[15px] font-semibold tracking-[-0.01em] truncate">Droply</h1>
             </div>
             <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
               <Button
                 variant="ghost"
                 size="icon"
-                className="hidden sm:flex h-9 w-9 sm:h-10 sm:w-10 rounded-lg hover:bg-accent hover:scale-105 transition-all duration-200 touch-manipulation"
+                className="hidden sm:flex h-9 w-9 sm:h-10 sm:w-10 rounded-lg hover:bg-accent transition-colors duration-150 touch-manipulation"
                 onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
                 title={viewMode === 'grid' ? 'Switch to list view' : 'Switch to grid view'}
               >
@@ -489,7 +491,7 @@ const Page: React.FC = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-9 sm:h-10 rounded-lg gap-1.5 hover:scale-105 transition-all duration-200 touch-manipulation"
+                  className="h-9 sm:h-10 rounded-lg gap-1.5 transition-colors duration-150 touch-manipulation"
                   title="Ask your documents"
                 >
                   <MessageSquare className="h-4 w-4" />
@@ -500,7 +502,7 @@ const Page: React.FC = () => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg hover:bg-accent hover:scale-105 transition-all duration-200 touch-manipulation"
+                  className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg hover:bg-accent transition-colors duration-150 touch-manipulation"
                   onClick={() => {
                     if (theme === 'light') {
                       setTheme('dark')
@@ -542,7 +544,7 @@ const Page: React.FC = () => {
             </p>
             <Button
               onClick={handleGDriveConnect}
-              className="rounded-lg hover:scale-105 transition-all duration-200 shadow-md hover:shadow-lg font-medium gap-2"
+              className="rounded-lg transition-colors duration-150 font-medium gap-2"
             >
               <Cloud className="h-4 w-4" />
               Connect Google Drive
@@ -557,7 +559,7 @@ const Page: React.FC = () => {
             </p>
             <Button
               onClick={handleOneDriveConnect}
-              className="rounded-lg hover:scale-105 transition-all duration-200 shadow-md hover:shadow-lg font-medium gap-2"
+              className="rounded-lg transition-colors duration-150 font-medium gap-2"
             >
               <img src="https://img.icons8.com/fluent/1200/microsoft-onedrive-2025.jpg" alt="OneDrive" className="h-4 w-4" />
               Connect OneDrive
@@ -572,7 +574,7 @@ const Page: React.FC = () => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg hover:bg-accent hover:scale-105 transition-all duration-200 shadow-sm hover:shadow-md flex-shrink-0 touch-manipulation"
+                  className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg hover:bg-accent transition-colors duration-150 hover: flex-shrink-0 touch-manipulation"
                   onClick={() => {
                     setFolderHierarchy(prev => prev.slice(0, prev.length - 1))
                   }}
@@ -599,7 +601,7 @@ const Page: React.FC = () => {
                           onClick={() => {
                             setFolderHierarchy(prev => prev.slice(0, idx + 1))
                           }}
-                          className="px-1.5 sm:px-2 py-1 rounded-md hover:bg-accent hover:text-foreground transition-all duration-200 font-medium hover:scale-105 whitespace-nowrap touch-manipulation"
+                          className="px-1.5 sm:px-2 py-1 rounded-md hover:bg-accent hover:text-foreground transition-colors duration-150 font-medium whitespace-nowrap touch-manipulation"
                         >
                           {displayName}
                         </button>
@@ -616,7 +618,7 @@ const Page: React.FC = () => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg hover:bg-accent hover:scale-105 transition-all duration-200 shadow-sm hover:shadow-md flex-shrink-0 touch-manipulation"
+                  className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg hover:bg-accent transition-colors duration-150 hover: flex-shrink-0 touch-manipulation"
                   onClick={() => {
                     setGDriveFolderHierarchy(prev => prev.slice(0, prev.length - 1))
                     const newFolderId = gDriveFolderHierarchy[gDriveFolderHierarchy.length - 2][0]
@@ -644,7 +646,7 @@ const Page: React.FC = () => {
                             setGDriveFolderHierarchy(prev => prev.slice(0, idx + 1))
                             fetchGDriveFiles(item[0])
                           }}
-                          className="px-1.5 sm:px-2 py-1 rounded-md hover:bg-accent hover:text-foreground transition-all duration-200 font-medium hover:scale-105 whitespace-nowrap touch-manipulation"
+                          className="px-1.5 sm:px-2 py-1 rounded-md hover:bg-accent hover:text-foreground transition-colors duration-150 font-medium whitespace-nowrap touch-manipulation"
                         >
                           {item[1]}
                         </button>
@@ -661,7 +663,7 @@ const Page: React.FC = () => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg hover:bg-accent hover:scale-105 transition-all duration-200 shadow-sm hover:shadow-md flex-shrink-0 touch-manipulation"
+                  className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg hover:bg-accent transition-colors duration-150 hover: flex-shrink-0 touch-manipulation"
                   onClick={() => {
                     setOneDriveFolderHierarchy(prev => prev.slice(0, prev.length - 1))
                     const newFolderId = oneDriveFolderHierarchy[oneDriveFolderHierarchy.length - 2][0]
@@ -689,7 +691,7 @@ const Page: React.FC = () => {
                             setOneDriveFolderHierarchy(prev => prev.slice(0, idx + 1))
                             fetchOneDriveFiles(item[0])
                           }}
-                          className="px-1.5 sm:px-2 py-1 rounded-md hover:bg-accent hover:text-foreground transition-all duration-200 font-medium hover:scale-105 whitespace-nowrap touch-manipulation"
+                          className="px-1.5 sm:px-2 py-1 rounded-md hover:bg-accent hover:text-foreground transition-colors duration-150 font-medium whitespace-nowrap touch-manipulation"
                         >
                           {item[1]}
                         </button>
@@ -714,7 +716,7 @@ const Page: React.FC = () => {
                   <Button
                     variant="outline"
                     size="icon"
-                    className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg border-2 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600 dark:hover:bg-blue-950/30 dark:hover:border-blue-800 dark:hover:text-blue-400 transition-all duration-200 shadow-sm hover:shadow-md flex-shrink-0 touch-manipulation"
+                    className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg border-2 hover:bg-accent hover:text-foreground transition-colors duration-150 hover: flex-shrink-0 touch-manipulation"
                     onClick={async () => {
                       if (!folderName.trim() || isCreatingFolder) return
                       setIsCreatingFolder(true)
@@ -804,7 +806,7 @@ const Page: React.FC = () => {
                         variant="outline"
                         className={cn(
                           "h-9 sm:h-10 rounded-lg gap-1.5 touch-manipulation",
-                          typeFilter !== 'all' && "border-blue-300 text-blue-700 dark:border-blue-800 dark:text-blue-300"
+                          typeFilter !== 'all' && "border-brand/40 text-brand"
                         )}
                       >
                         <File className="h-4 w-4" />
@@ -834,7 +836,7 @@ const Page: React.FC = () => {
                         variant="outline"
                         className={cn(
                           "h-9 sm:h-10 rounded-lg gap-1.5 touch-manipulation",
-                          sizeFilter !== 'all' && "border-blue-300 text-blue-700 dark:border-blue-800 dark:text-blue-300"
+                          sizeFilter !== 'all' && "border-brand/40 text-brand"
                         )}
                       >
                         <HardDrive className="h-4 w-4" />
@@ -938,12 +940,12 @@ const Page: React.FC = () => {
         ) : (
           <div className={isMobile ? "space-y-2" : (viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4" : "space-y-2")}>
             {currentFiles.map(item => (
-            <Card key={item.id} className={`${isMobile || viewMode === 'list' ? 'p-3 sm:p-4' : ''} hover:shadow-md transition-shadow`}>
+            <Card key={item.id} className={`${isMobile || viewMode === 'list' ? 'p-3 sm:p-4' : ''} hover: transition-shadow`}>
               <CardContent className={`${isMobile || viewMode === 'list' ? 'p-0' : 'p-3 sm:p-4'}`}>
                 <div className="flex items-center gap-3 sm:gap-4">
                   <div className="flex-shrink-0 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14">
                     {item.isFolder ? (
-                      <Folder className="h-12 w-12 sm:h-14 sm:w-14 text-blue-500" />
+                      <Folder className="h-12 w-12 sm:h-14 sm:w-14 text-brand" />
                     ) : (
                       <i className={`${getFileIconClass(item.name)} file-icon-large`}></i>
                     )}
@@ -952,7 +954,7 @@ const Page: React.FC = () => {
                   <div className="flex-grow min-w-0">
                     <div className="flex items-center justify-between gap-2">
                       <div
-                        className={`truncate text-sm sm:text-base ${item.isFolder ? 'cursor-pointer hover:text-blue-500 active:text-blue-600' : ''} touch-manipulation`}
+                        className={`truncate text-sm sm:text-base ${item.isFolder ? 'cursor-pointer hover:text-brand' : ''} touch-manipulation`}
                         onClick={() => {
                           if (item.isFolder) {
                             if (activeSource === 'droply') {
@@ -979,7 +981,7 @@ const Page: React.FC = () => {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-9 w-9 sm:h-8 sm:w-8 rounded-lg hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-950/30 dark:hover:text-blue-400 transition-all duration-200 touch-manipulation"
+                            className="h-9 w-9 sm:h-8 sm:w-8 rounded-lg hover:bg-accent hover:text-foreground transition-colors duration-150 touch-manipulation"
                             onClick={() => {
                               setRenamingFile(item)
                               setNewFileName(item.name)
@@ -995,7 +997,7 @@ const Page: React.FC = () => {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-9 w-9 sm:h-8 sm:w-8 rounded-lg hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-950/30 dark:hover:text-green-400 transition-all duration-200 touch-manipulation"
+                              className="h-9 w-9 sm:h-8 sm:w-8 rounded-lg hover:bg-accent hover:text-foreground transition-colors duration-150 touch-manipulation"
                               onClick={() => {
                                 navigator.clipboard.writeText(item.fileUrl)
                                 notifySuccess("File URL copied to clipboard")
@@ -1007,7 +1009,7 @@ const Page: React.FC = () => {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-9 w-9 sm:h-8 sm:w-8 rounded-lg hover:bg-purple-50 hover:text-purple-600 dark:hover:bg-purple-950/30 dark:hover:text-purple-400 transition-all duration-200 touch-manipulation"
+                              className="h-9 w-9 sm:h-8 sm:w-8 rounded-lg hover:bg-accent hover:text-foreground transition-colors duration-150 touch-manipulation"
                               onClick={() => window.open(item.fileUrl, '_blank')}
                               title="Open in new tab"
                             >
@@ -1018,7 +1020,7 @@ const Page: React.FC = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-9 w-9 sm:h-8 sm:w-8 rounded-lg text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30 dark:hover:text-red-400 transition-all duration-200 touch-manipulation"
+                          className="h-9 w-9 sm:h-8 sm:w-8 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors duration-150 touch-manipulation"
                           disabled={deletingFiles.has(item.id)}
                           onClick={async () => {
                             try {
@@ -1115,7 +1117,7 @@ const Page: React.FC = () => {
           <DialogFooter>
             <Button
               variant="outline"
-              className="rounded-lg hover:scale-105 transition-all duration-200"
+              className="rounded-lg transition-colors duration-150"
               onClick={() => {
                 setRenameDialogOpen(false)
                 setRenamingFile(null)
@@ -1127,7 +1129,7 @@ const Page: React.FC = () => {
             <Button
               onClick={handleRename}
               disabled={!newFileName.trim() || newFileName.trim() === renamingFile?.name || isRenaming}
-              className="rounded-lg hover:scale-105 transition-all duration-200 shadow-sm hover:shadow-md"
+              className="rounded-lg transition-colors duration-150 hover:"
             >
               {isRenaming ? (
                 <>

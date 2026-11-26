@@ -42,7 +42,7 @@ export default function AdminPanel() {
     toast.error(message, {
       position: "top-right",
       autoClose: 4000,
-      theme: "dark",
+      theme: "light",
       transition: Bounce,
     });
 
@@ -50,7 +50,7 @@ export default function AdminPanel() {
     toast.success(message, {
       position: "top-right",
       autoClose: 3000,
-      theme: "dark",
+      theme: "light",
       transition: Bounce,
     });
 
@@ -161,7 +161,7 @@ export default function AdminPanel() {
       </header>
 
       <main className="max-w-xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-6">
-        <Card className="shadow-md">
+        <Card className="">
           <CardContent className="pt-6">
             <div ref={searchRef} className="relative space-y-2">
               <label className="text-sm text-muted-foreground">Search users</label>
@@ -237,7 +237,7 @@ export default function AdminPanel() {
         </Card>
 
         {selected && (
-          <Card className="shadow-md">
+          <Card className="">
             <CardContent className="pt-6 space-y-5">
               <div className="flex items-start gap-3">
                 {selected.imageUrl ? (
@@ -265,7 +265,7 @@ export default function AdminPanel() {
                 </div>
               </div>
 
-              <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 flex items-center justify-between gap-3">
+              <div className="rounded-lg border border-border bg-muted/60 px-4 py-3 flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm text-muted-foreground">Current file limit</p>
                   <p className="text-xl font-semibold">{selected.limitLabel}</p>

@@ -1,3 +1,6 @@
+/* The stageshow kit (landing demos) sits above preflight and below utilities */
+@layer theme, base, components, stageshow, utilities;
+
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -6,25 +9,22 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-  --font-mono: 'Inter', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
-  --color-sidebar-ring: var(--sidebar-ring);
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-soft: var(--brand-soft);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -43,73 +43,83 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* One warm neutral family, an ink primary, and one cobalt accent (brand)
+   spent on selection, progress, folders and focus. Status colors mean status. */
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --radius: 0.5rem;
+  --background: oklch(0.985 0.002 75);
+  --foreground: oklch(0.21 0.006 60);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.21 0.006 60);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --popover-foreground: oklch(0.21 0.006 60);
+  --primary: oklch(0.21 0.006 60);
+  --primary-foreground: oklch(0.985 0.002 75);
+  --secondary: oklch(0.955 0.003 75);
+  --secondary-foreground: oklch(0.21 0.006 60);
+  --muted: oklch(0.955 0.003 75);
+  --muted-foreground: oklch(0.52 0.007 65);
+  --accent: oklch(0.945 0.003 75);
+  --accent-foreground: oklch(0.21 0.006 60);
+  --border: oklch(0.905 0.004 75);
+  --input: oklch(0.875 0.005 75);
+  --ring: oklch(0.55 0.15 256);
+  --brand: oklch(0.52 0.16 256);
+  --brand-foreground: oklch(0.99 0 0);
+  --brand-soft: oklch(0.95 0.025 256);
+  --success: oklch(0.52 0.11 155);
+  --warning: oklch(0.6 0.12 65);
+  --destructive: oklch(0.55 0.19 27);
+  --sidebar: oklch(0.975 0.002 75);
+  --sidebar-foreground: oklch(0.21 0.006 60);
+  --sidebar-accent: oklch(0.935 0.003 75);
+  --sidebar-accent-foreground: oklch(0.21 0.006 60);
+  --sidebar-border: oklch(0.905 0.004 75);
+
+  --toastify-color-light: var(--popover);
+  --toastify-text-color-light: var(--popover-foreground);
+  --toastify-color-success: var(--success);
+  --toastify-color-error: var(--destructive);
+  --toastify-color-info: var(--brand);
+  --toastify-color-warning: var(--warning);
+  --toastify-color-progress-light: var(--brand);
+  --toastify-font-family: inherit;
+  --toastify-toast-bd-radius: 10px;
+  --toastify-toast-min-height: 52px;
+  --toastify-toast-shadow: 0 0 0 1px var(--border), 0 8px 24px -8px rgb(0 0 0 / 0.18);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: oklch(0.165 0.004 65);
+  --foreground: oklch(0.94 0.004 75);
+  --card: oklch(0.2 0.004 65);
+  --card-foreground: oklch(0.94 0.004 75);
+  --popover: oklch(0.225 0.004 65);
+  --popover-foreground: oklch(0.94 0.004 75);
+  --primary: oklch(0.94 0.004 75);
+  --primary-foreground: oklch(0.2 0.004 65);
+  --secondary: oklch(0.25 0.004 65);
+  --secondary-foreground: oklch(0.94 0.004 75);
+  --muted: oklch(0.24 0.004 65);
+  --muted-foreground: oklch(0.67 0.006 70);
+  --accent: oklch(0.26 0.004 65);
+  --accent-foreground: oklch(0.94 0.004 75);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 13%);
+  --ring: oklch(0.68 0.13 256);
+  --brand: oklch(0.68 0.13 256);
+  --brand-foreground: oklch(0.17 0.01 256);
+  --brand-soft: oklch(0.29 0.05 256);
+  --success: oklch(0.72 0.12 155);
+  --warning: oklch(0.78 0.12 75);
+  --destructive: oklch(0.68 0.17 25);
+  --sidebar: oklch(0.185 0.004 65);
+  --sidebar-foreground: oklch(0.94 0.004 75);
+  --sidebar-accent: oklch(0.25 0.004 65);
+  --sidebar-accent-foreground: oklch(0.94 0.004 75);
+  --sidebar-border: oklch(1 0 0 / 8%);
+
+  --toastify-toast-shadow: 0 0 0 1px var(--border), 0 8px 24px -8px rgb(0 0 0 / 0.5);
 }
 
 @layer base {
@@ -117,33 +127,8 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-  }
-  h1, h2, h3, h4, h5, h6 {
-    font-family: 'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-  }
-}
-
-/* Custom styles for file-icons-js to make them larger */
-.file-icon-large {
-  font-size: 2rem !important;
-  line-height: 1;
-}
-
-@media (min-width: 640px) {
-  .file-icon-large {
-    font-size: 2.5rem !important;
-  }
-}
-
-.file-icon-large:before {
-  font-size: 2rem !important;
-}
-
-@media (min-width: 640px) {
-  .file-icon-large:before {
-    font-size: 2.5rem !important;
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "cv11";
   }
 }
 
@@ -220,6 +205,10 @@
   margin: 0.3rem 0;
 }
 
+.answer-markdown li::marker {
+  color: var(--muted-foreground);
+}
+
 .answer-markdown li > p {
   margin: 0 0 0.25rem;
 }
@@ -229,13 +218,16 @@
 }
 
 .answer-markdown a {
+  color: var(--brand);
   text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--brand) 40%, transparent);
   text-underline-offset: 2px;
 }
 
 .answer-markdown code {
-  font-size: 0.875em;
-  background: color-mix(in oklab, var(--foreground) 8%, transparent);
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--muted);
   border-radius: 0.3rem;
   padding: 0.1em 0.35em;
 }
@@ -244,8 +236,9 @@
   margin: 0.65rem 0;
   padding: 0.75rem 0.9rem;
   overflow-x: auto;
-  border-radius: 0.65rem;
-  background: color-mix(in oklab, var(--foreground) 6%, transparent);
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  background: var(--muted);
 }
 
 .answer-markdown pre code {
