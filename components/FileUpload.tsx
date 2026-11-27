@@ -10,7 +10,7 @@ import {
 } from "@imagekit/next";
 import { useState, type RefObject } from "react";
 import { Button } from "@/components/ui/button";
-import { Upload } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
 import { Bounce, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
@@ -179,13 +179,12 @@ const UploadExample: React.FC<UploadExampleProps> = ({ fileInputRef, parentId, o
             />
             <Button
                 variant="default"
-                className="rounded-lg transition-colors duration-150 font-medium text-sm sm:text-base touch-manipulation w-full sm:w-auto"
+                className="w-full touch-manipulation sm:w-auto"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploading}
             >
-                <Upload className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">{isUploading ? `Uploading ${Math.round(progress)}%` : "Upload"}</span>
-                <span className="sm:hidden">{isUploading ? `${Math.round(progress)}%` : "Upload"}</span>
+                {isUploading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
+                <span className="tabular-nums">{isUploading ? `Uploading ${Math.round(progress)}%` : "Upload"}</span>
             </Button>
         </div>
     );

@@ -1,17 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { UserButton } from "@clerk/nextjs";
-import Link from "next/link";
-import { Search, Shield, Infinity, RotateCcw, Loader2 } from "lucide-react";
+import { Search, Infinity, RotateCcw, Loader2, Users, ChevronRight } from "lucide-react";
 import { Bounce, ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+import { AppShell } from "@/components/app/AppShell";
+import { cn } from "@/lib/utils";
 
 type AdminUser = {
   id: string;
@@ -28,14 +24,41 @@ function displayName(user: AdminUser) {
   return [user.firstName, user.lastName].filter(Boolean).join(" ") || "—";
 }
 
+function Avatar({ user, size }: { user: AdminUser; size: "sm" | "lg" }) {
+  const box = size === "sm" ? "size-8 text-xs" : "size-11 text-sm";
+  if (user.imageUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={user.imageUrl} alt="" className={cn(box, "shrink-0 rounded-full object-cover")} />
+    );
+  }
+  return (
+    <div className={cn(box, "flex shrink-0 items-center justify-center rounded-full bg-muted font-medium")}>
+      {(user.firstName?.[0] || user.email[0] || "?").toUpperCase()}
+    </div>
+  );
+}
+
+function LimitBadge({ user }: { user: AdminUser }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-md px-1.5 py-px text-xs font-medium tabular-nums",
+        user.isUnlimited ? "bg-brand-soft text-brand" : "bg-muted text-muted-foreground"
+      )}
+    >
+      {user.isUnlimited && <Infinity className="size-3" />}
+      {user.limitLabel}
+    </span>
+  );
+}
+
 export default function AdminPanel() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<AdminUser[]>([]);
   const [selected, setSelected] = useState<AdminUser | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [listOpen, setListOpen] = useState(false);
-  const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const notifyError = (message: string) =>
@@ -53,16 +76,6 @@ export default function AdminPanel() {
       theme: "light",
       transition: Bounce,
     });
-
-  useEffect(() => {
-    const onPointerDown = (e: MouseEvent) => {
-      if (!searchRef.current?.contains(e.target as Node)) {
-        setListOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onPointerDown);
-    return () => document.removeEventListener("mousedown", onPointerDown);
-  }, []);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -87,7 +100,6 @@ export default function AdminPanel() {
           return;
         }
         setResults(data.users ?? []);
-        setListOpen(true);
       } catch {
         notifyError("Search failed");
         setResults([]);
@@ -100,12 +112,6 @@ export default function AdminPanel() {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [query]);
-
-  const selectUser = (user: AdminUser) => {
-    setSelected(user);
-    setQuery(user.email);
-    setListOpen(false);
-  };
 
   const setUnlimited = async (unlimited: boolean) => {
     if (!selected) return;
@@ -137,178 +143,140 @@ export default function AdminPanel() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-background text-foreground">
-      <ToastContainer />
-      <header className="border-b border-border px-4 sm:px-8 py-4 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Shield className="h-5 w-5 text-primary" />
-          <div>
-            <h1 className="text-lg sm:text-xl font-semibold tracking-tight">
-              Admin · File limits
-            </h1>
-            <p className="text-xs sm:text-sm text-muted-foreground">
-              Search users by name or email. Default limit is 5.
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/dashboard">Dashboard</Link>
-          </Button>
-          <UserButton afterSignOutUrl="/" />
-        </div>
-      </header>
+  const hasQuery = query.trim().length >= 2;
 
-      <main className="max-w-xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-6">
-        <Card className="">
-          <CardContent className="pt-6">
-            <div ref={searchRef} className="relative space-y-2">
-              <label className="text-sm text-muted-foreground">Search users</label>
+  return (
+    <AppShell>
+      <ToastContainer />
+      <main className="flex-1">
+        <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 lg:px-10 lg:py-9">
+          <h1 className="text-xl font-semibold tracking-[-0.02em] sm:text-2xl">Users</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Find a user by name or email and change their upload limit. The default limit is 5 files.
+          </p>
+
+          <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+            <section className="min-w-0">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   type="search"
-                  placeholder="Start typing a name or email…"
+                  placeholder="Search by name or email"
                   value={query}
-                  onChange={(e) => {
-                    setQuery(e.target.value);
-                    setSelected(null);
-                    setListOpen(true);
-                  }}
-                  onFocus={() => {
-                    if (results.length > 0) setListOpen(true);
-                  }}
-                  className="pl-9 pr-9"
+                  onChange={(e) => setQuery(e.target.value)}
+                  className="h-9 pl-9 pr-9"
                   autoComplete="off"
+                  aria-label="Search users"
                 />
                 {isSearching && (
-                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                  <Loader2 className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
                 )}
               </div>
 
-              {listOpen && query.trim().length >= 2 && (
-                <div className="absolute z-20 mt-1 w-full rounded-md border border-border bg-background shadow-lg overflow-hidden">
-                  {results.length === 0 && !isSearching ? (
-                    <p className="px-3 py-3 text-sm text-muted-foreground">
-                      No users found
-                    </p>
-                  ) : (
-                    <ul className="max-h-64 overflow-y-auto py-1">
-                      {results.map((user) => (
+              <div className="mt-3 overflow-hidden rounded-xl border bg-card">
+                <div className="flex h-9 items-center border-b bg-muted/40 px-4 text-xs font-medium text-muted-foreground">
+                  <span className="flex-1">User</span>
+                  <span className="w-24 text-right">File limit</span>
+                  <span className="w-6" />
+                </div>
+                {!hasQuery ? (
+                  <div className="flex flex-col items-center px-6 py-14 text-center">
+                    <span className="mb-3 flex size-10 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                      <Users className="size-5" />
+                    </span>
+                    <p className="text-sm font-medium">Search to see users</p>
+                    <p className="mt-1 text-sm text-muted-foreground">Type at least two characters.</p>
+                  </div>
+                ) : isSearching && results.length === 0 ? (
+                  <div className="divide-y">
+                    {[56, 42, 64].map((w) => (
+                      <div key={w} className="flex h-14 animate-pulse items-center gap-3 px-4">
+                        <div className="size-8 rounded-full bg-muted" />
+                        <div className="h-3 rounded bg-muted" style={{ width: `${w * 0.6}%` }} />
+                      </div>
+                    ))}
+                  </div>
+                ) : results.length === 0 ? (
+                  <p className="px-4 py-10 text-center text-sm text-muted-foreground">No users found</p>
+                ) : (
+                  <ul className="divide-y">
+                    {results.map((user) => {
+                      const active = selected?.id === user.id;
+                      return (
                         <li key={user.id}>
                           <button
                             type="button"
-                            className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-muted/70 transition-colors"
-                            onClick={() => selectUser(user)}
-                          >
-                            {user.imageUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={user.imageUrl}
-                                alt=""
-                                className="h-8 w-8 rounded-full object-cover shrink-0"
-                              />
-                            ) : (
-                              <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium shrink-0">
-                                {(user.firstName?.[0] || user.email[0] || "?").toUpperCase()}
-                              </div>
+                            onClick={() => setSelected(user)}
+                            aria-current={active ? "true" : undefined}
+                            className={cn(
+                              "flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors",
+                              active ? "bg-muted/70" : "hover:bg-muted/40"
                             )}
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium truncate">
-                                {displayName(user)}
-                              </p>
-                              <p className="text-xs text-muted-foreground truncate">
-                                {user.email}
-                              </p>
-                            </div>
-                            <span className="text-xs text-muted-foreground shrink-0">
-                              {user.limitLabel}
+                          >
+                            <Avatar user={user} size="sm" />
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm font-medium">{displayName(user)}</span>
+                              <span className="block truncate text-xs text-muted-foreground">{user.email}</span>
                             </span>
+                            <span className="w-24 text-right">
+                              <LimitBadge user={user} />
+                            </span>
+                            <ChevronRight className="size-4 w-6 shrink-0 text-muted-foreground/60" />
                           </button>
                         </li>
-                      ))}
-                    </ul>
-                  )}
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            </section>
+
+            <aside className="rounded-xl border bg-card lg:sticky lg:top-9">
+              {selected ? (
+                <>
+                  <div className="flex items-center gap-3 border-b p-4">
+                    <Avatar user={selected} size="lg" />
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{displayName(selected)}</p>
+                      <p className="truncate text-sm text-muted-foreground">{selected.email}</p>
+                    </div>
+                  </div>
+                  <dl className="space-y-3 p-4 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <dt className="text-muted-foreground">File limit</dt>
+                      <dd><LimitBadge user={selected} /></dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">User ID</dt>
+                      <dd className="mt-1 break-all font-mono text-xs">{selected.id}</dd>
+                    </div>
+                  </dl>
+                  <div className="border-t p-4">
+                    {!selected.isUnlimited ? (
+                      <Button className="w-full" disabled={isUpdating} onClick={() => setUnlimited(true)}>
+                        {isUpdating ? <Loader2 className="size-4 animate-spin" /> : <Infinity className="size-4" />}
+                        Grant unlimited
+                      </Button>
+                    ) : (
+                      <Button variant="outline" className="w-full" disabled={isUpdating} onClick={() => setUnlimited(false)}>
+                        {isUpdating ? <Loader2 className="size-4 animate-spin" /> : <RotateCcw className="size-4" />}
+                        Reset to 5
+                      </Button>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="p-5">
+                  <p className="text-sm font-medium">No user selected</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Pick someone from the list to see their limit and change it.
+                  </p>
                 </div>
               )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {selected && (
-          <Card className="">
-            <CardContent className="pt-6 space-y-5">
-              <div className="flex items-start gap-3">
-                {selected.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={selected.imageUrl}
-                    alt=""
-                    className="h-12 w-12 rounded-full object-cover shrink-0"
-                  />
-                ) : (
-                  <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center text-sm font-medium shrink-0">
-                    {(selected.firstName?.[0] || selected.email[0] || "?").toUpperCase()}
-                  </div>
-                )}
-                <div className="min-w-0 space-y-1">
-                  <p className="font-medium text-base truncate">
-                    {displayName(selected)}
-                  </p>
-                  <p className="text-sm text-muted-foreground truncate">
-                    {selected.email}
-                  </p>
-                  <p className="text-xs text-muted-foreground font-mono break-all">
-                    {selected.id}
-                  </p>
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-border bg-muted/60 px-4 py-3 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm text-muted-foreground">Current file limit</p>
-                  <p className="text-xl font-semibold">{selected.limitLabel}</p>
-                </div>
-                {selected.isUnlimited ? (
-                  <Infinity className="h-6 w-6 text-primary shrink-0" />
-                ) : null}
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-3">
-                {!selected.isUnlimited ? (
-                  <Button
-                    className="flex-1"
-                    disabled={isUpdating}
-                    onClick={() => setUnlimited(true)}
-                  >
-                    {isUpdating ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Infinity className="h-4 w-4 mr-2" />
-                    )}
-                    Grant unlimited
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    disabled={isUpdating}
-                    onClick={() => setUnlimited(false)}
-                  >
-                    {isUpdating ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <RotateCcw className="h-4 w-4 mr-2" />
-                    )}
-                    Reset to 5
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+            </aside>
+          </div>
+        </div>
       </main>
-    </div>
+    </AppShell>
   );
 }

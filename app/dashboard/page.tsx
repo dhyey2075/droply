@@ -1,20 +1,36 @@
 "use client"
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { useUser, UserButton } from '@clerk/nextjs'
-import { useTheme } from 'next-themes'
+import { useUser } from '@clerk/nextjs'
 import UploadExample from '@/components/FileUpload'
 import { IndexingStatusBadge } from '@/components/IndexingStatusBadge'
+import { AppShell } from '@/components/app/AppShell'
 import prettyBytes from 'pretty-bytes'
-import { ArrowLeft, ChevronDown, ExternalLink, File, Folder, FolderPlus, HardDrive, Search, Share2, Trash2Icon, Grid2X2, ListFilter, Loader2, Pencil, FolderOpen, Sun, Moon, Monitor, Cloud, MessageSquare, X } from 'lucide-react'
-import { getClassWithColor } from 'file-icons-js'
-import 'file-icons-js/css/style.css'
+import {
+  ArrowLeft,
+  ChevronDown,
+  ChevronRight,
+  Cloud,
+  ExternalLink,
+  File as FileIcon,
+  Folder,
+  FolderOpen,
+  FolderPlus,
+  HardDrive,
+  LayoutGrid,
+  Link2,
+  List,
+  Loader2,
+  MoreHorizontal,
+  Pencil,
+  Search,
+  Trash2,
+  Upload,
+  X,
+} from 'lucide-react'
+import { FileIcon as TypeIcon, defaultStyles, type DefaultExtensionType } from 'react-file-icon'
 import { Bounce, ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import dateFormat from 'dateformat'
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card"
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -28,6 +44,7 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
@@ -66,10 +83,146 @@ export interface File {
   onedriveId?: string
 }
 
+const INDEX_STATES = new Set(['PENDING', 'INPROGRESS', 'COMPLETED', 'FAILED'])
+
+const extensionOf = (fileName: string) => {
+  const dot = fileName.lastIndexOf('.')
+  return dot > 0 ? fileName.slice(dot + 1).toLowerCase() : ''
+}
+
+/** A document page in the file type's colour. The extension label is only
+ *  drawn when the icon is large enough to read it. */
+function TypeGlyph({ name, label, className }: { name: string; label?: boolean; className: string }) {
+  const ext = extensionOf(name)
+  const base = defaultStyles[ext as DefaultExtensionType]
+  // Only Office types ship a page colour; every other category gets one here,
+  // so no icon is a white page that disappears on a dark surface.
+  const tone = base?.color ? null : TYPE_TONES[base?.type ?? 'binary'] ?? TYPE_TONES.binary
+  const style = tone
+    ? { ...base, color: tone[0], foldColor: tone[1], labelColor: tone[0], glyphColor: 'rgba(255,255,255,0.55)' }
+    : base
+  return (
+    <span className={cn('block shrink-0', className)} aria-hidden>
+      <TypeIcon extension={label ? ext : ''} labelUppercase radius={4} {...style} />
+    </span>
+  )
+}
+
+// [page, fold] per file category
+const TYPE_TONES: Record<string, [string, string]> = {
+  acrobat: ['#d93831', '#b52b26'],
+  document: ['#2c5898', '#254a80'],
+  spreadsheet: ['#1a754c', '#16613f'],
+  presentation: ['#d14423', '#ae3a1e'],
+  compressed: ['#a0773a', '#82602e'],
+  image: ['#7a5ac8', '#6247a6'],
+  code: ['#2b8590', '#216a73'],
+  code2: ['#2b8590', '#216a73'],
+  audio: ['#c2457a', '#9f3663'],
+  video: ['#c8791c', '#a46316'],
+  font: ['#5b6475', '#485061'],
+  vector: ['#5b6475', '#485061'],
+  binary: ['#6b7280', '#555b67'],
+}
+
+const isImage = (item: File) =>
+  !item.isFolder && /^image/.test(item.type || '') && Boolean(item.thumbnailUrl)
+
+function FileGlyph({ item, size }: { item: File; size: 'sm' | 'lg' }) {
+  if (item.isFolder) {
+    return size === 'sm' ? (
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-brand-soft text-brand">
+        <Folder className="size-4 fill-brand/20" />
+      </span>
+    ) : (
+      <Folder className="size-12 fill-brand/15 text-brand" strokeWidth={1.5} />
+    )
+  }
+  if (size === 'sm' && isImage(item)) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={item.thumbnailUrl} alt="" className="size-8 shrink-0 rounded-md object-cover ring-1 ring-border" />
+    )
+  }
+  return size === 'sm' ? (
+    <span className="flex size-8 shrink-0 items-center justify-center">
+      <TypeGlyph name={item.name} className="w-[22px]" />
+    </span>
+  ) : (
+    <TypeGlyph name={item.name} label className="w-14" />
+  )
+}
+
+function ItemActions({
+  item,
+  canRename,
+  deleting,
+  onRename,
+  onCopy,
+  onOpen,
+  onDelete,
+}: {
+  item: File
+  canRename: boolean
+  deleting: boolean
+  onRename: () => void
+  onCopy: () => void
+  onOpen: () => void
+  onDelete: () => void
+}) {
+  return (
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="text-muted-foreground data-[state=open]:bg-accent data-[state=open]:text-foreground"
+          title="More actions"
+          disabled={deleting}
+        >
+          {deleting ? <Loader2 className="size-4 animate-spin" /> : <MoreHorizontal className="size-4" />}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-44">
+        {!item.isFolder && (
+          <>
+            <DropdownMenuItem onSelect={onOpen}>
+              <ExternalLink />
+              Open in new tab
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={onCopy}>
+              <Link2 />
+              Copy link
+            </DropdownMenuItem>
+          </>
+        )}
+        {canRename && (
+          <DropdownMenuItem onSelect={onRename}>
+            <Pencil />
+            Rename
+          </DropdownMenuItem>
+        )}
+        {(!item.isFolder || canRename) && <DropdownMenuSeparator />}
+        <DropdownMenuItem variant="destructive" onSelect={onDelete}>
+          <Trash2 />
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+function Status({ item }: { item: File }) {
+  if (item.isFolder || !item.indexingStatus || !INDEX_STATES.has(item.indexingStatus)) {
+    return <span className="text-muted-foreground/60">—</span>
+  }
+  return <IndexingStatusBadge status={item.indexingStatus} error={item.indexError} />
+}
+
 const Page: React.FC = () => {
   const [media, setMedia] = useState<File[]>([])
   const [folderName, setFolderName] = useState<string>('')
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
   const uploadRef = useRef<HTMLInputElement>(null)
   const prevFolderIdRef = useRef<string | null>(null)
   const hasFetchedMediaRef = useRef(false)
@@ -81,6 +234,7 @@ const Page: React.FC = () => {
   const [newFileName, setNewFileName] = useState<string>('')
   const [isRenaming, setIsRenaming] = useState<boolean>(false)
   const [isCreatingFolder, setIsCreatingFolder] = useState<boolean>(false)
+  const [newFolderOpen, setNewFolderOpen] = useState<boolean>(false)
   const [activeSource] = useState<'droply' | 'gdrive' | 'onedrive'>('droply')
   const [isGDriveConnected, setIsGDriveConnected] = useState<boolean>(false)
   const [gDriveFiles, setGDriveFiles] = useState<File[]>([])
@@ -96,8 +250,6 @@ const Page: React.FC = () => {
   const [sizeFilter, setSizeFilter] = useState<MediaSizeFilter>('all')
 
   const { isSignedIn, user } = useUser()
-  const { theme, setTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
 
   const currentFolderId = folderHierarchy[folderHierarchy.length - 1][0]
@@ -105,8 +257,6 @@ const Page: React.FC = () => {
     Boolean(debouncedSearch) || typeFilter !== 'all' || sizeFilter !== 'all'
 
   useEffect(() => {
-    setMounted(true)
-    
     // Check if mobile on mount
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 640) // sm breakpoint
@@ -384,11 +534,6 @@ const Page: React.FC = () => {
     void fetchUserMedia({ silent: true })
   }
 
-  const getFileIconClass = (fileName: string): string => {
-    const iconClass = getClassWithColor(fileName)
-    return iconClass || 'text-icon'
-  }
-
   const handleGDriveConnect = async () => {
     try {
       const response = await fetch('/api/gdrive/auth')
@@ -467,685 +612,611 @@ const Page: React.FC = () => {
     }
   }
 
+  const handleCreateFolder = async () => {
+    if (!folderName.trim() || isCreatingFolder) return
+    setIsCreatingFolder(true)
+    try {
+      const response = await fetch('/api/folders/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: folderName,
+          userId: user.id,
+          parentId: currentFolderId,
+        }),
+      })
+      const data = await response.json()
+      if (data.success) {
+        setFolderName('')
+        setNewFolderOpen(false)
+        if (data.folder) {
+          setMedia(prev => {
+            if (prev.some(item => item.id === data.folder.id)) return prev
+            return [data.folder, ...prev]
+          })
+        }
+        void fetchUserMedia({ silent: true })
+        notifySuccess("Folder created successfully")
+      } else {
+        notifyError(data.message)
+      }
+    } catch {
+      notifyError('Failed to create folder')
+    } finally {
+      setIsCreatingFolder(false)
+    }
+  }
+
+  const handleDelete = async (item: File) => {
+    try {
+      setDeletingFiles(prev => new Set(prev).add(item.id))
+      const endpoint = item.isFolder ? '/api/folders/delete' : '/api/delete-media'
+      const response = await fetch(endpoint, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fileId: item.id,
+          userId: user.id,
+        }),
+      })
+      const data = await response.json()
+      if (data.message) {
+        setMedia(prev =>
+          prev.filter(file =>
+            file.id !== item.id && file.parentId !== item.id
+          )
+        )
+        void fetchUserMedia({ silent: true })
+        notifySuccess(`${item.isFolder ? 'Folder' : 'File'} deleted successfully`)
+      } else {
+        notifyError(data.message)
+      }
+    } finally {
+      setDeletingFiles(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(item.id)
+        return newSet
+      })
+    }
+  }
+
+  const openFolder = (item: File) => {
+    if (!item.isFolder) return
+    if (activeSource === 'droply') {
+      setFolderHierarchy(prev => [...prev, [item.id, item.name]])
+    } else if (activeSource === 'gdrive') {
+      const gdriveId = item.gdriveId || item.id
+      setGDriveFolderHierarchy(prev => [...prev, [gdriveId, item.name]])
+      fetchGDriveFiles(gdriveId)
+    } else if (activeSource === 'onedrive') {
+      const onedriveId = item.onedriveId || item.id
+      setOneDriveFolderHierarchy(prev => [...prev, [onedriveId, item.name]])
+      fetchOneDriveFiles(onedriveId)
+    }
+  }
+
+  const copyLink = (item: File) => {
+    navigator.clipboard.writeText(item.fileUrl)
+    notifySuccess("File URL copied to clipboard")
+  }
+
+  const openFile = (item: File) => window.open(item.fileUrl, '_blank')
+
+  const startRename = (item: File) => {
+    setRenamingFile(item)
+    setNewFileName(item.name)
+    setRenameDialogOpen(true)
+  }
+
+  const isDroply = activeSource === 'droply'
+  const hierarchy = isDroply
+    ? folderHierarchy
+    : activeSource === 'gdrive'
+      ? gDriveFolderHierarchy
+      : oneDriveFolderHierarchy
+  const rootLabel = isDroply ? 'My files' : activeSource === 'gdrive' ? 'Google Drive' : 'OneDrive'
+  const crumbLabel = (idx: number) => (idx === 0 ? rootLabel : hierarchy[idx][1] || 'Untitled')
+  const pageTitle = crumbLabel(hierarchy.length - 1)
+  const showList = isMobile || viewMode === 'list'
+
+  const navigateTo = (idx: number) => {
+    if (isDroply) {
+      setFolderHierarchy(prev => prev.slice(0, idx + 1))
+    } else if (activeSource === 'gdrive') {
+      setGDriveFolderHierarchy(prev => prev.slice(0, idx + 1))
+      fetchGDriveFiles(gDriveFolderHierarchy[idx][0])
+    } else {
+      setOneDriveFolderHierarchy(prev => prev.slice(0, idx + 1))
+      fetchOneDriveFiles(oneDriveFolderHierarchy[idx][0])
+    }
+  }
+
+  const actionsFor = (item: File) => ({
+    item,
+    canRename: isDroply,
+    deleting: deletingFiles.has(item.id),
+    onRename: () => startRename(item),
+    onCopy: () => copyLink(item),
+    onOpen: () => openFile(item),
+    onDelete: () => void handleDelete(item),
+  })
+
+  const meta = (item: File) =>
+    item.isFolder ? 'Folder' : `${prettyBytes(item.size)} · ${dateFormat(item.createdAt, "mmm d, yyyy")}`
+
+  const connectState = (provider: 'gdrive' | 'onedrive') => (
+    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed px-6 py-20 text-center">
+      <span className="mb-4 flex size-11 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+        <Cloud className="size-5" />
+      </span>
+      <p className="font-medium">Connect {provider === 'gdrive' ? 'Google Drive' : 'OneDrive'}</p>
+      <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+        Connect your {provider === 'gdrive' ? 'Google Drive' : 'OneDrive'} account to access and manage your files from one place.
+      </p>
+      <Button className="mt-5" onClick={provider === 'gdrive' ? handleGDriveConnect : handleOneDriveConnect}>
+        <Cloud className="size-4" />
+        Connect {provider === 'gdrive' ? 'Google Drive' : 'OneDrive'}
+      </Button>
+    </div>
+  )
+
+  const filterButton = (active: boolean) =>
+    cn(
+      "h-9 shrink-0 gap-1.5 font-normal",
+      active && "border-brand/30 bg-brand-soft text-brand hover:bg-brand-soft hover:text-brand"
+    )
+
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b sticky top-0 z-50 bg-background">
-        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
-          <div className="flex items-center justify-between gap-2 sm:gap-4">
-            <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/droply.ico" alt="" className="h-6 w-6 shrink-0" />
-              <h1 className="text-[15px] font-semibold tracking-[-0.01em] truncate">Droply</h1>
-            </div>
-            <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="hidden sm:flex h-9 w-9 sm:h-10 sm:w-10 rounded-lg hover:bg-accent transition-colors duration-150 touch-manipulation"
-                onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-                title={viewMode === 'grid' ? 'Switch to list view' : 'Switch to grid view'}
-              >
-                {viewMode === 'grid' ? <ListFilter className="h-4 w-4 sm:h-5 sm:w-5" /> : <Grid2X2 className="h-4 w-4 sm:h-5 sm:w-5" />}
-              </Button>
-              <a href="/ask">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-9 sm:h-10 rounded-lg gap-1.5 transition-colors duration-150 touch-manipulation"
-                  title="Ask your documents"
-                >
-                  <MessageSquare className="h-4 w-4" />
-                  <span className="hidden sm:inline">Ask</span>
-                </Button>
-              </a>
-              {mounted && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg hover:bg-accent transition-colors duration-150 touch-manipulation"
-                  onClick={() => {
-                    if (theme === 'light') {
-                      setTheme('dark')
-                    } else if (theme === 'dark') {
-                      setTheme('system')
-                    } else {
-                      setTheme('light')
-                    }
-                  }}
-                  title={`Theme: ${theme === 'system' ? 'System' : theme === 'dark' ? 'Dark' : 'Light'}`}
-                >
-                  {theme === 'light' ? (
-                    <Sun className="h-4 w-4 sm:h-5 sm:w-5" />
-                  ) : theme === 'dark' ? (
-                    <Moon className="h-4 w-4 sm:h-5 sm:w-5" />
-                  ) : (
-                    <Monitor className="h-4 w-4 sm:h-5 sm:w-5" />
-                  )}
-                </Button>
-              )}
-              <div className="hidden sm:block">
-                <UserButton />
-              </div>
-              <div className="sm:hidden">
-                <UserButton />
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
-        {activeSource === 'gdrive' && !isGDriveConnected ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center px-4">
-            <Cloud className="h-20 w-20 text-muted-foreground mb-4 opacity-50" />
-            <p className="text-lg sm:text-xl font-medium text-foreground mb-2">Connect Google Drive</p>
-            <p className="text-sm text-muted-foreground mb-6 max-w-md">
-              Connect your Google Drive account to access and manage your files from one place.
-            </p>
-            <Button
-              onClick={handleGDriveConnect}
-              className="rounded-lg transition-colors duration-150 font-medium gap-2"
-            >
-              <Cloud className="h-4 w-4" />
-              Connect Google Drive
-            </Button>
-          </div>
-        ) : activeSource === 'onedrive' && !isOneDriveConnected ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center px-4">
-            <img src="https://img.icons8.com/color/96/onedrive.png" alt="OneDrive" className="h-20 w-20 mb-4 opacity-50" />
-            <p className="text-lg sm:text-xl font-medium text-foreground mb-2">Connect OneDrive</p>
-            <p className="text-sm text-muted-foreground mb-6 max-w-md">
-              Connect your OneDrive account to access and manage your files from one place.
-            </p>
-            <Button
-              onClick={handleOneDriveConnect}
-              className="rounded-lg transition-colors duration-150 font-medium gap-2"
-            >
-              <img src="https://img.icons8.com/fluent/1200/microsoft-onedrive-2025.jpg" alt="OneDrive" className="h-4 w-4" />
-              Connect OneDrive
-            </Button>
-          </div>
-        ) : (
-          <>
-        <div className="mb-4 sm:mb-6 space-y-3 sm:space-y-0">
-          {activeSource === 'droply' && (
-            <div className="flex items-center gap-2 min-w-0">
-              {folderHierarchy.length > 1 && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg hover:bg-accent transition-colors duration-150 hover: flex-shrink-0 touch-manipulation"
-                  onClick={() => {
-                    setFolderHierarchy(prev => prev.slice(0, prev.length - 1))
-                  }}
-                  title="Go back"
-                >
-                  <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
-                </Button>
-              )}
-              <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground min-w-0 overflow-x-auto scrollbar-hide">
-                {folderHierarchy.map((item, idx) => {
-                  const isLast = idx === folderHierarchy.length - 1
-                  const isRoot = item[0] === ROOT_FOLDER_ID
-                  const displayName = isRoot ? "" : (item[1] || "")
-                  
-                  return (
-                    <React.Fragment key={item[0]}>
-                      {idx > 0 && <span className="text-muted-foreground flex-shrink-0">/</span>}
-                      {isLast ? (
-                        <span className="font-medium text-foreground truncate">
-                          {displayName}
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => {
-                            setFolderHierarchy(prev => prev.slice(0, idx + 1))
-                          }}
-                          className="px-1.5 sm:px-2 py-1 rounded-md hover:bg-accent hover:text-foreground transition-colors duration-150 font-medium whitespace-nowrap touch-manipulation"
-                        >
-                          {displayName}
-                        </button>
-                      )}
-                    </React.Fragment>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-          {activeSource === 'gdrive' && (
-            <div className="flex items-center gap-2 min-w-0">
-              {gDriveFolderHierarchy.length > 1 && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg hover:bg-accent transition-colors duration-150 hover: flex-shrink-0 touch-manipulation"
-                  onClick={() => {
-                    setGDriveFolderHierarchy(prev => prev.slice(0, prev.length - 1))
-                    const newFolderId = gDriveFolderHierarchy[gDriveFolderHierarchy.length - 2][0]
-                    fetchGDriveFiles(newFolderId)
-                  }}
-                  title="Go back"
-                >
-                  <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
-                </Button>
-              )}
-              <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground min-w-0 overflow-x-auto scrollbar-hide">
-                {gDriveFolderHierarchy.map((item, idx) => {
-                  const isLast = idx === gDriveFolderHierarchy.length - 1
-                  
-                  return (
-                    <React.Fragment key={item[0]}>
-                      {idx > 0 && <span className="text-muted-foreground flex-shrink-0">/</span>}
-                      {isLast ? (
-                        <span className="font-medium text-foreground truncate">
-                          {item[1]}
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => {
-                            setGDriveFolderHierarchy(prev => prev.slice(0, idx + 1))
-                            fetchGDriveFiles(item[0])
-                          }}
-                          className="px-1.5 sm:px-2 py-1 rounded-md hover:bg-accent hover:text-foreground transition-colors duration-150 font-medium whitespace-nowrap touch-manipulation"
-                        >
-                          {item[1]}
-                        </button>
-                      )}
-                    </React.Fragment>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-          {activeSource === 'onedrive' && (
-            <div className="flex items-center gap-2 min-w-0">
-              {oneDriveFolderHierarchy.length > 1 && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg hover:bg-accent transition-colors duration-150 hover: flex-shrink-0 touch-manipulation"
-                  onClick={() => {
-                    setOneDriveFolderHierarchy(prev => prev.slice(0, prev.length - 1))
-                    const newFolderId = oneDriveFolderHierarchy[oneDriveFolderHierarchy.length - 2][0]
-                    fetchOneDriveFiles(newFolderId)
-                  }}
-                  title="Go back"
-                >
-                  <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
-                </Button>
-              )}
-              <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground min-w-0 overflow-x-auto scrollbar-hide">
-                {oneDriveFolderHierarchy.map((item, idx) => {
-                  const isLast = idx === oneDriveFolderHierarchy.length - 1
-                  
-                  return (
-                    <React.Fragment key={item[0]}>
-                      {idx > 0 && <span className="text-muted-foreground flex-shrink-0">/</span>}
-                      {isLast ? (
-                        <span className="font-medium text-foreground truncate">
-                          {item[1]}
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => {
-                            setOneDriveFolderHierarchy(prev => prev.slice(0, idx + 1))
-                            fetchOneDriveFiles(item[0])
-                          }}
-                          className="px-1.5 sm:px-2 py-1 rounded-md hover:bg-accent hover:text-foreground transition-colors duration-150 font-medium whitespace-nowrap touch-manipulation"
-                        >
-                          {item[1]}
-                        </button>
-                      )}
-                    </React.Fragment>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {activeSource === 'droply' && (
-            <div className="flex flex-col gap-2 sm:gap-3">
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
-                <div className="flex items-center gap-2 flex-1 sm:flex-initial">
-                  <Input
-                    placeholder="New folder name"
-                    value={folderName}
-                    onChange={(e) => setFolderName(e.target.value)}
-                    className="flex-1 sm:w-[200px] text-sm sm:text-base"
-                  />
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg border-2 hover:bg-accent hover:text-foreground transition-colors duration-150 hover: flex-shrink-0 touch-manipulation"
-                    onClick={async () => {
-                      if (!folderName.trim() || isCreatingFolder) return
-                      setIsCreatingFolder(true)
-                      try {
-                        const response = await fetch('/api/folders/create', {
-                          method: 'POST',
-                          headers: {
-                            'Content-Type': 'application/json',
-                          },
-                          body: JSON.stringify({
-                            name: folderName,
-                            userId: user.id,
-                            parentId: currentFolderId,
-                          }),
-                        })
-                        const data = await response.json()
-                        if (data.success) {
-                          setFolderName('')
-                          if (data.folder) {
-                            setMedia(prev => {
-                              if (prev.some(item => item.id === data.folder.id)) return prev
-                              return [data.folder, ...prev]
-                            })
-                          }
-                          void fetchUserMedia({ silent: true })
-                          notifySuccess("Folder created successfully")
-                        } else {
-                          notifyError(data.message)
-                        }
-                      } catch {
-                        notifyError('Failed to create folder')
-                      } finally {
-                        setIsCreatingFolder(false)
-                      }
-                    }}
-                    disabled={isCreatingFolder}
-                    title="Create folder"
-                  >
-                    {isCreatingFolder ? (
-                      <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
-                    ) : (
-                      <FolderPlus className="h-4 w-4 sm:h-5 sm:w-5" />
-                    )}
-                  </Button>
-                </div>
-
-                <div className="flex-shrink-0">
-                  <UploadExample
-                    fileInputRef={uploadRef}
-                    parentId={currentFolderId}
-                    onUploadComplete={handleFileUploadComplete}
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                <div className="relative flex-1 min-w-0">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    value={searchInput}
-                    onChange={(e) => setSearchInput(e.target.value)}
-                    placeholder="Search files in this folder…"
-                    className="pl-9 pr-9 text-sm sm:text-base"
-                    aria-label="Search file names in current folder"
-                  />
-                  {searchInput && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 rounded-md"
-                      onClick={() => {
-                        setSearchInput('')
-                        setDebouncedSearch('')
-                      }}
-                      title="Clear search"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "h-9 sm:h-10 rounded-lg gap-1.5 touch-manipulation",
-                          typeFilter !== 'all' && "border-brand/40 text-brand"
-                        )}
-                      >
-                        <File className="h-4 w-4" />
-                        <span className="truncate max-w-[7rem] sm:max-w-none">{typeFilterLabel}</span>
-                        <ChevronDown className="h-3.5 w-3.5 opacity-60" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuLabel>File type</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuRadioGroup
-                        value={typeFilter}
-                        onValueChange={(value) => setTypeFilter(value as MediaTypeFilter)}
-                      >
-                        {MEDIA_TYPE_OPTIONS.map((option) => (
-                          <DropdownMenuRadioItem key={option.value} value={option.value}>
-                            {option.label}
-                          </DropdownMenuRadioItem>
-                        ))}
-                      </DropdownMenuRadioGroup>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "h-9 sm:h-10 rounded-lg gap-1.5 touch-manipulation",
-                          sizeFilter !== 'all' && "border-brand/40 text-brand"
-                        )}
-                      >
-                        <HardDrive className="h-4 w-4" />
-                        <span className="truncate max-w-[7rem] sm:max-w-none">{sizeFilterLabel}</span>
-                        <ChevronDown className="h-3.5 w-3.5 opacity-60" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-52">
-                      <DropdownMenuLabel>File size</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuRadioGroup
-                        value={sizeFilter}
-                        onValueChange={(value) => setSizeFilter(value as MediaSizeFilter)}
-                      >
-                        {MEDIA_SIZE_OPTIONS.map((option) => (
-                          <DropdownMenuRadioItem key={option.value} value={option.value}>
-                            <span className="flex flex-col">
-                              <span>{option.label}</span>
-                              {option.value !== 'all' && (
-                                <span className="text-xs text-muted-foreground">{option.description}</span>
-                              )}
-                            </span>
-                          </DropdownMenuRadioItem>
-                        ))}
-                      </DropdownMenuRadioGroup>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  {hasActiveFilters && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="h-9 sm:h-10 rounded-lg gap-1.5 touch-manipulation"
-                      onClick={clearFilters}
-                      title="Clear search and filters"
-                    >
-                      <X className="h-4 w-4" />
-                      <span className="hidden sm:inline">Clear</span>
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {isLoadingFiles ? (
-          <div className={isMobile ? "space-y-2" : (viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4" : "space-y-2")}>
-            {[...Array(6)].map((_, index) => (
-              <Card key={index} className={`${isMobile || viewMode === 'list' ? 'p-3 sm:p-4' : ''} animate-pulse`}>
-                <CardContent className={`${isMobile || viewMode === 'list' ? 'p-0' : 'p-3 sm:p-4'}`}>
-                  <div className="flex items-center gap-3 sm:gap-4">
-                    <div className="flex-shrink-0">
-                      <div className="w-12 h-12 sm:w-14 sm:h-14 bg-muted rounded-lg"></div>
-                    </div>
-                    <div className="flex-grow min-w-0 space-y-2">
-                      <div className="h-4 bg-muted rounded w-3/4"></div>
-                      <div className="h-3 bg-muted rounded w-1/2"></div>
-                    </div>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <div className="w-9 h-9 sm:w-8 sm:h-8 bg-muted rounded-lg"></div>
-                      <div className="w-9 h-9 sm:w-8 sm:h-8 bg-muted rounded-lg"></div>
-                      <div className="w-9 h-9 sm:w-8 sm:h-8 bg-muted rounded-lg"></div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : currentFiles.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 sm:py-16 text-center px-4">
-            <FolderOpen className="h-16 w-16 sm:h-20 sm:w-20 text-muted-foreground mb-3 sm:mb-4 opacity-50" />
-            <p className="text-base sm:text-lg font-medium text-foreground mb-1 sm:mb-2">
-              {activeSource === 'gdrive' 
-                ? 'No files in Google Drive' 
-                : activeSource === 'onedrive'
-                  ? 'No files in OneDrive'
-                  : hasActiveFilters
-                    ? 'No matching files'
-                    : 'This folder is empty'}
-            </p>
-            <p className="text-xs sm:text-sm text-muted-foreground">
-              {activeSource === 'gdrive' 
-                ? 'Files from your Google Drive will appear here' 
-                : activeSource === 'onedrive'
-                  ? 'Files from your OneDrive will appear here'
-                  : hasActiveFilters
-                    ? 'Try a different name, type, or size filter in this folder'
-                    : 'Upload files or create a folder to get started'}
-            </p>
-            {activeSource === 'droply' && hasActiveFilters && (
-              <Button
-                variant="outline"
-                className="mt-4 rounded-lg"
-                onClick={clearFilters}
-              >
-                Clear filters
-              </Button>
-            )}
-          </div>
-        ) : (
-          <div className={isMobile ? "space-y-2" : (viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4" : "space-y-2")}>
-            {currentFiles.map(item => (
-            <Card key={item.id} className={`${isMobile || viewMode === 'list' ? 'p-3 sm:p-4' : ''} hover: transition-shadow`}>
-              <CardContent className={`${isMobile || viewMode === 'list' ? 'p-0' : 'p-3 sm:p-4'}`}>
-                <div className="flex items-center gap-3 sm:gap-4">
-                  <div className="flex-shrink-0 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14">
-                    {item.isFolder ? (
-                      <Folder className="h-12 w-12 sm:h-14 sm:w-14 text-brand" />
-                    ) : (
-                      <i className={`${getFileIconClass(item.name)} file-icon-large`}></i>
-                    )}
-                  </div>
-                  
-                  <div className="flex-grow min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <div
-                        className={`truncate text-sm sm:text-base ${item.isFolder ? 'cursor-pointer hover:text-brand' : ''} touch-manipulation`}
-                        onClick={() => {
-                          if (item.isFolder) {
-                            if (activeSource === 'droply') {
-                              setFolderHierarchy(prev => [...prev, [item.id, item.name]])
-                            } else if (activeSource === 'gdrive') {
-                              // Handle Google Drive folder navigation
-                              const gdriveId = item.gdriveId || item.id
-                              setGDriveFolderHierarchy(prev => [...prev, [gdriveId, item.name]])
-                              fetchGDriveFiles(gdriveId)
-                            } else if (activeSource === 'onedrive') {
-                              // Handle OneDrive folder navigation
-                              const onedriveId = item.onedriveId || item.id
-                              setOneDriveFolderHierarchy(prev => [...prev, [onedriveId, item.name]])
-                              fetchOneDriveFiles(onedriveId)
-                            }
-                          }
-                        }}
-                      >
-                        <span className="font-medium">{item.name}</span>
-                      </div>
-                      
-                      <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
-                        {(activeSource === 'droply') && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-9 w-9 sm:h-8 sm:w-8 rounded-lg hover:bg-accent hover:text-foreground transition-colors duration-150 touch-manipulation"
-                            onClick={() => {
-                              setRenamingFile(item)
-                              setNewFileName(item.name)
-                              setRenameDialogOpen(true)
-                            }}
-                            title="Rename"
+    <AppShell>
+      <main className="flex-1">
+        <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-10 lg:py-9">
+          {activeSource === 'gdrive' && !isGDriveConnected ? (
+            connectState('gdrive')
+          ) : activeSource === 'onedrive' && !isOneDriveConnected ? (
+            connectState('onedrive')
+          ) : (
+            <>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div className="min-w-0">
+                  {hierarchy.length > 1 && (
+                    <nav aria-label="Breadcrumb" className="mb-1.5 flex min-w-0 items-center gap-1 overflow-x-auto text-sm text-muted-foreground scrollbar-hide">
+                      {hierarchy.slice(0, -1).map((item, idx) => (
+                        <React.Fragment key={item[0]}>
+                          <button
+                            type="button"
+                            onClick={() => navigateTo(idx)}
+                            className="shrink-0 whitespace-nowrap rounded-sm transition-colors hover:text-foreground"
                           >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {!item.isFolder && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-9 w-9 sm:h-8 sm:w-8 rounded-lg hover:bg-accent hover:text-foreground transition-colors duration-150 touch-manipulation"
-                              onClick={() => {
-                                navigator.clipboard.writeText(item.fileUrl)
-                                notifySuccess("File URL copied to clipboard")
-                              }}
-                              title="Copy link"
-                            >
-                              <Share2 className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-9 w-9 sm:h-8 sm:w-8 rounded-lg hover:bg-accent hover:text-foreground transition-colors duration-150 touch-manipulation"
-                              onClick={() => window.open(item.fileUrl, '_blank')}
-                              title="Open in new tab"
-                            >
-                              <ExternalLink className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 sm:h-8 sm:w-8 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors duration-150 touch-manipulation"
-                          disabled={deletingFiles.has(item.id)}
-                          onClick={async () => {
-                            try {
-                              setDeletingFiles(prev => new Set(prev).add(item.id))
-                              const endpoint = item.isFolder ? '/api/folders/delete' : '/api/delete-media'
-                              const response = await fetch(endpoint, {
-                                method: 'DELETE',
-                                headers: {
-                                  'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({
-                                  fileId: item.id,
-                                  userId: user.id,
-                                }),
-                              })
-                              const data = await response.json()
-                              if (data.message) {
-                                setMedia(prev =>
-                                  prev.filter(file =>
-                                    file.id !== item.id && file.parentId !== item.id
-                                  )
-                                )
-                                void fetchUserMedia({ silent: true })
-                                notifySuccess(`${item.isFolder ? 'Folder' : 'File'} deleted successfully`)
-                              } else {
-                                notifyError(data.message)
-                              }
-                            } finally {
-                              setDeletingFiles(prev => {
-                                const newSet = new Set(prev)
-                                newSet.delete(item.id)
-                                return newSet
-                              })
-                            }
-                          }}
+                            {crumbLabel(idx)}
+                          </button>
+                          <ChevronRight className="size-3.5 shrink-0 opacity-50" />
+                        </React.Fragment>
+                      ))}
+                    </nav>
+                  )}
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    {hierarchy.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="-ml-2 shrink-0 text-muted-foreground"
+                        onClick={() => navigateTo(hierarchy.length - 2)}
+                        title="Go back"
+                      >
+                        <ArrowLeft className="size-4" />
+                      </Button>
+                    )}
+                    <h1 className="truncate text-xl font-semibold tracking-[-0.02em] sm:text-2xl">{pageTitle}</h1>
+                  </div>
+                </div>
+
+                {isDroply && (
+                  <div className="grid shrink-0 grid-cols-2 gap-2 sm:flex sm:items-center">
+                    <Button variant="outline" onClick={() => setNewFolderOpen(true)}>
+                      <FolderPlus className="size-4" />
+                      New folder
+                    </Button>
+                    <UploadExample
+                      fileInputRef={uploadRef}
+                      parentId={currentFolderId}
+                      onUploadComplete={handleFileUploadComplete}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {isDroply && (
+                <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <div className="relative w-full sm:max-w-xs">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={searchInput}
+                      onChange={(e) => setSearchInput(e.target.value)}
+                      placeholder="Search this folder"
+                      className="h-9 pl-9 pr-9"
+                      aria-label="Search file names in current folder"
+                    />
+                    {searchInput && (
+                      <button
+                        type="button"
+                        className="absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                        onClick={() => {
+                          setSearchInput('')
+                          setDebouncedSearch('')
+                        }}
+                        title="Clear search"
+                      >
+                        <X className="size-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className={filterButton(typeFilter !== 'all')}>
+                          <FileIcon className="size-4" />
+                          {typeFilterLabel}
+                          <ChevronDown className="size-3.5 opacity-60" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-48">
+                        <DropdownMenuLabel>File type</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuRadioGroup
+                          value={typeFilter}
+                          onValueChange={(value) => setTypeFilter(value as MediaTypeFilter)}
                         >
-                          {deletingFiles.has(item.id) ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2Icon className="h-4 w-4" />
+                          {MEDIA_TYPE_OPTIONS.map((option) => (
+                            <DropdownMenuRadioItem key={option.value} value={option.value}>
+                              {option.label}
+                            </DropdownMenuRadioItem>
+                          ))}
+                        </DropdownMenuRadioGroup>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className={filterButton(sizeFilter !== 'all')}>
+                          <HardDrive className="size-4" />
+                          {sizeFilterLabel}
+                          <ChevronDown className="size-3.5 opacity-60" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-52">
+                        <DropdownMenuLabel>File size</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuRadioGroup
+                          value={sizeFilter}
+                          onValueChange={(value) => setSizeFilter(value as MediaSizeFilter)}
+                        >
+                          {MEDIA_SIZE_OPTIONS.map((option) => (
+                            <DropdownMenuRadioItem key={option.value} value={option.value}>
+                              <span className="flex flex-col">
+                                <span>{option.label}</span>
+                                {option.value !== 'all' && (
+                                  <span className="text-xs text-muted-foreground">{option.description}</span>
+                                )}
+                              </span>
+                            </DropdownMenuRadioItem>
+                          ))}
+                        </DropdownMenuRadioGroup>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    {hasActiveFilters && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="h-9 shrink-0 gap-1.5 font-normal text-muted-foreground"
+                        onClick={clearFilters}
+                        title="Clear search and filters"
+                      >
+                        <X className="size-4" />
+                        Clear
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="ml-auto hidden items-center gap-3 sm:flex">
+                    {!isLoadingFiles && (
+                      <span className="whitespace-nowrap text-sm text-muted-foreground tabular-nums">
+                        {currentFiles.length} {currentFiles.length === 1 ? 'item' : 'items'}
+                      </span>
+                    )}
+                    <div className="flex rounded-lg border bg-card p-0.5" role="group" aria-label="View">
+                      {([['list', List, 'List view'], ['grid', LayoutGrid, 'Grid view']] as const).map(([mode, Icon, label]) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          aria-pressed={viewMode === mode}
+                          title={label}
+                          onClick={() => setViewMode(mode)}
+                          className={cn(
+                            "flex size-7 items-center justify-center rounded-md transition-colors",
+                            viewMode === mode ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
                           )}
+                        >
+                          <Icon className="size-4" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-4">
+                {isLoadingFiles ? (
+                  showList ? (
+                    <div className="overflow-hidden rounded-xl border bg-card">
+                      <div className="h-9 border-b bg-muted/40" />
+                      <div className="divide-y">
+                        {[62, 48, 70, 54, 40, 58].map((w, index) => (
+                          <div key={index} className="flex h-14 animate-pulse items-center gap-3 px-4">
+                            <div className="size-8 rounded-md bg-muted" />
+                            <div className="h-3 rounded bg-muted" style={{ width: `${w * 0.5}%` }} />
+                            <div className="ml-auto hidden h-3 w-16 rounded bg-muted sm:block" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                      {[...Array(10)].map((_, index) => (
+                        <div key={index} className="animate-pulse overflow-hidden rounded-xl border bg-card">
+                          <div className="aspect-[4/3] bg-muted/60" />
+                          <div className="space-y-2 p-3">
+                            <div className="h-3 w-3/4 rounded bg-muted" />
+                            <div className="h-2.5 w-1/2 rounded bg-muted" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                ) : currentFiles.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center rounded-xl border border-dashed px-6 py-20 text-center">
+                    <span className="mb-4 flex size-11 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                      {hasActiveFilters ? <Search className="size-5" /> : <FolderOpen className="size-5" />}
+                    </span>
+                    <p className="font-medium">
+                      {activeSource === 'gdrive'
+                        ? 'No files in Google Drive'
+                        : activeSource === 'onedrive'
+                          ? 'No files in OneDrive'
+                          : hasActiveFilters
+                            ? 'No matching files'
+                            : 'This folder is empty'}
+                    </p>
+                    <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+                      {activeSource === 'gdrive'
+                        ? 'Files from your Google Drive will appear here'
+                        : activeSource === 'onedrive'
+                          ? 'Files from your OneDrive will appear here'
+                          : hasActiveFilters
+                            ? 'Try a different name, type, or size filter in this folder'
+                            : 'Upload files or create a folder to get started'}
+                    </p>
+                    {isDroply && hasActiveFilters && (
+                      <Button variant="outline" className="mt-5" onClick={clearFilters}>
+                        Clear filters
+                      </Button>
+                    )}
+                    {isDroply && !hasActiveFilters && (
+                      <div className="mt-5 flex flex-wrap justify-center gap-2">
+                        <Button onClick={() => uploadRef.current?.click()}>
+                          <Upload className="size-4" />
+                          Upload a file
+                        </Button>
+                        <Button variant="outline" onClick={() => setNewFolderOpen(true)}>
+                          <FolderPlus className="size-4" />
+                          New folder
                         </Button>
                       </div>
-                    </div>
-                    
-                    {!item.isFolder && (
-                      <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground mt-1 flex-wrap">
-                        <span>{prettyBytes(item.size)}</span>
-                        <span className="hidden sm:inline">·</span>
-                        <span className="hidden sm:inline">{dateFormat(item.createdAt, "mmm d, yyyy")}</span>
-                        <span className="sm:hidden">{dateFormat(item.createdAt, "mm/dd/yy")}</span>
-                        {activeSource === 'droply' && (
-                          <>
-                            <span className="hidden sm:inline">·</span>
-                            <IndexingStatusBadge
-                              status={item.indexingStatus}
-                              error={item.indexError}
-                            />
-                          </>
-                        )}
-                      </div>
                     )}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-            ))}
-          </div>
-        )}
-        </>
-        )}
+                ) : showList ? (
+                  <div className="overflow-hidden rounded-xl border bg-card">
+                    <table className="w-full table-fixed text-sm">
+                      <thead className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
+                        <tr>
+                          <th className="h-9 px-4 font-medium">Name</th>
+                          {isDroply && <th className="hidden w-32 px-3 font-medium md:table-cell">Status</th>}
+                          <th className="hidden w-24 px-3 text-right font-medium sm:table-cell">Size</th>
+                          <th className="hidden w-36 px-3 font-medium lg:table-cell">Uploaded</th>
+                          <th className="w-24 px-2"><span className="sr-only">Actions</span></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {currentFiles.map(item => (
+                          <tr
+                            key={item.id}
+                            className={cn("group h-14 transition-colors hover:bg-muted/40", item.isFolder && "cursor-pointer")}
+                            onClick={item.isFolder ? () => openFolder(item) : undefined}
+                          >
+                            <td className="px-4">
+                              <div className="flex min-w-0 items-center gap-3">
+                                <FileGlyph item={item} size="sm" />
+                                <div className="min-w-0">
+                                  {item.isFolder ? (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        openFolder(item)
+                                      }}
+                                      className="block max-w-full truncate text-left font-medium hover:underline hover:underline-offset-4"
+                                    >
+                                      {item.name}
+                                    </button>
+                                  ) : (
+                                    <span className="block truncate font-medium" title={item.name}>{item.name}</span>
+                                  )}
+                                  <span className="block truncate text-xs text-muted-foreground sm:hidden">{meta(item)}</span>
+                                </div>
+                              </div>
+                            </td>
+                            {isDroply && (
+                              <td className="hidden px-3 md:table-cell">
+                                <Status item={item} />
+                              </td>
+                            )}
+                            <td className="hidden px-3 text-right text-muted-foreground tabular-nums sm:table-cell">
+                              {item.isFolder ? <span className="text-muted-foreground/60">—</span> : prettyBytes(item.size)}
+                            </td>
+                            <td className="hidden px-3 text-muted-foreground lg:table-cell">
+                              {dateFormat(item.createdAt, "mmm d, yyyy")}
+                            </td>
+                            <td className="px-2" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center justify-end gap-0.5">
+                                {!item.isFolder && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    className="hidden text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 sm:inline-flex"
+                                    onClick={() => copyLink(item)}
+                                    title="Copy link"
+                                  >
+                                    <Link2 className="size-4" />
+                                  </Button>
+                                )}
+                                <ItemActions {...actionsFor(item)} />
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                    {currentFiles.map(item => {
+                      const preview = isImage(item) ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={item.thumbnailUrl} alt="" className="size-full object-cover" />
+                      ) : (
+                        <FileGlyph item={item} size="lg" />
+                      )
+                      const previewClass = "flex aspect-[4/3] w-full items-center justify-center overflow-hidden border-b bg-muted/40"
+                      return (
+                        <div key={item.id} className="group flex flex-col overflow-hidden rounded-xl border bg-card transition-colors hover:border-foreground/20">
+                          {item.isFolder ? (
+                            <button type="button" className={previewClass} onClick={() => openFolder(item)} aria-label={`Open ${item.name}`}>
+                              {preview}
+                            </button>
+                          ) : (
+                            <div className={previewClass}>{preview}</div>
+                          )}
+                          <div className="flex items-start gap-1 py-2.5 pl-3 pr-1.5">
+                            <div className="min-w-0 flex-1 pt-0.5">
+                              <p className="truncate text-sm font-medium" title={item.name}>{item.name}</p>
+                              <div className="mt-1 flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
+                                <span className="truncate">{item.isFolder ? 'Folder' : prettyBytes(item.size)}</span>
+                                {isDroply && !item.isFolder && item.indexingStatus && INDEX_STATES.has(item.indexingStatus) && (
+                                  <IndexingStatusBadge status={item.indexingStatus} error={item.indexError} />
+                                )}
+                              </div>
+                            </div>
+                            <ItemActions {...actionsFor(item)} />
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </main>
-      
+
+      <Dialog
+        open={newFolderOpen}
+        onOpenChange={(open) => {
+          setNewFolderOpen(open)
+          if (!open) setFolderName('')
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New folder</DialogTitle>
+            <DialogDescription>Create a folder in {pageTitle}.</DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              void handleCreateFolder()
+            }}
+          >
+            <Input
+              autoFocus
+              placeholder="Folder name"
+              value={folderName}
+              onChange={(e) => setFolderName(e.target.value)}
+            />
+            <DialogFooter className="mt-5">
+              <Button type="button" variant="outline" onClick={() => setNewFolderOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={!folderName.trim() || isCreatingFolder}>
+                {isCreatingFolder && <Loader2 className="size-4 animate-spin" />}
+                Create folder
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Rename {renamingFile?.isFolder ? 'Folder' : 'File'}</DialogTitle>
+            <DialogTitle>Rename {renamingFile?.isFolder ? 'folder' : 'file'}</DialogTitle>
             <DialogDescription>
               Enter a new name for {renamingFile?.isFolder ? 'this folder' : 'this file'}.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              handleRename()
+            }}
+          >
             <Input
+              autoFocus
               value={newFileName}
               onChange={(e) => setNewFileName(e.target.value)}
               placeholder="Enter new name"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleRename()
-                }
-              }}
             />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              className="rounded-lg transition-colors duration-150"
-              onClick={() => {
-                setRenameDialogOpen(false)
-                setRenamingFile(null)
-                setNewFileName('')
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleRename}
-              disabled={!newFileName.trim() || newFileName.trim() === renamingFile?.name || isRenaming}
-              className="rounded-lg transition-colors duration-150 hover:"
-            >
-              {isRenaming ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Renaming...
-                </>
-              ) : (
-                'Rename'
-              )}
-            </Button>
-          </DialogFooter>
+            <DialogFooter className="mt-5">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setRenameDialogOpen(false)
+                  setRenamingFile(null)
+                  setNewFileName('')
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={!newFileName.trim() || newFileName.trim() === renamingFile?.name || isRenaming}
+              >
+                {isRenaming && <Loader2 className="size-4 animate-spin" />}
+                {isRenaming ? 'Renaming…' : 'Rename'}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
-      
+
       <ToastContainer />
-    </div>
+    </AppShell>
   )
 }
 

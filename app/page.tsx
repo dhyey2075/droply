@@ -1,8 +1,14 @@
 import Link from "next/link";
-import { ArrowRight, FolderTree, Link2, MessageSquareText, Upload } from "lucide-react";
+import { ArrowRight, Check, FolderTree, Link2, MessageSquareText, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Wordmark } from "@/components/Wordmark";
-import { HeroDemo } from "@/components/landing/HeroDemo";
+import { AskShowcase, HeroDemo } from "@/components/landing/HeroDemo";
+
+const ASK_POINTS = [
+  "Every answer lists the files it was read from.",
+  "Search all your files, or choose just the ones you want.",
+  "Conversations are saved, so you can pick one up later.",
+];
 
 const FEATURES = [
   {
@@ -67,6 +73,31 @@ export default function Home() {
 
           <div className="w-full">
             <HeroDemo />
+          </div>
+        </section>
+
+        <section className="border-t">
+          <div className="mx-auto grid max-w-6xl items-center gap-12 px-5 py-16 sm:px-8 sm:py-24 xl:max-w-[1240px] xl:grid-cols-[760px_minmax(0,400px)] xl:justify-between xl:gap-10">
+            <div id="ask-demo" className="w-full xl:order-1">
+              <AskShowcase />
+            </div>
+            <div className="max-w-xl xl:order-2">
+              <h2 className="text-3xl leading-[1.1] font-semibold tracking-[-0.03em] text-balance sm:text-4xl">
+                Ask a question. See where the answer came from.
+              </h2>
+              <p className="mt-5 text-base leading-relaxed text-muted-foreground">
+                Droply reads what you upload, so you can ask in plain words and get
+                an answer drawn from your own files.
+              </p>
+              <ul className="mt-7 space-y-3 text-sm">
+                {ASK_POINTS.map((point) => (
+                  <li key={point} className="flex items-start gap-3">
+                    <Check className="mt-0.5 size-4 flex-none text-brand" strokeWidth={2} />
+                    <span>{point}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </section>
 

@@ -41,3 +41,25 @@ Not checked:
 - Full motion smoothness: the film's sampling reported gaps (22 at 1440, 8 at 390), so motion during those frames was not judged; the coverage line is inconclusive.
 - Dashboard and Ask page visuals: behind Clerk auth, not screenshotted.
 - The kit's own lint errors (excluded via `eslint.config.mjs`, not fixed).
+
+---
+
+# Ask demo (`AskDemo.tsx`, landing page "Ask a question" section)
+
+Story: a question is typed and sent, "Searching your files" holds a beat, the answer streams in word by word, its sources land under it, and the first source opens beside the window with the passage it was read from. Plays once when scrolled into view; the poster is the final state.
+
+Gate: `film.mjs http://localhost:3005/ --select '#ask-demo .ss-fit' --states --gate` — "rehearsal passed" at 1440 and at 390 (light). Remaining lines are notes, not gate failures: typing width steps on the field's characters, the spinner crossing the thread's crop while the Collapse opens.
+
+Fixed during the rehearsal:
+- `kit override` (bubble, stamp, tapback): the kit's `Thread`/`Bubble` ship rules the film's CSS-path check can't attribute to the kit once Next bundles them. The thread is built from `Collapse`, `Text`, `Spinner` and `Badge` instead, as the skill's ai-chat example does.
+- framing (compact window narrower than tall): compact stage shortened to 352px, the earlier turn dropped, the window bleeds 38px off the right edge, and the composer and thread keep a 38px inset so the Send button stays visible.
+- half-pixel glyph: Send arrow sized 14px.
+- lands on a transform: the source card stays on its own layer (`will-change-transform`).
+
+Assumptions:
+- The answer and sources are illustrative copy, not output from the product.
+- Compact omits the source card (no room beside the window); the numbered source chips carry the payoff.
+
+Not checked:
+- Dark theme at 390 was not filmed; light 390 and light/dark 1440 were screenshotted.
+- Motion sampling had gaps (3–5 per run), so the coverage line is inconclusive.
